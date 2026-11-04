@@ -52,7 +52,7 @@ UNITS = {
     "g": ("mass", .001), "mg": ("mass", .000001),
     "pf": ("capacitance", 1e-12), "nf": ("capacitance", 1e-9),
     "uf": ("capacitance", 1e-6), "µf": ("capacitance", 1e-6), "mf": ("capacitance", 1e-3),
-    "°c": ("temperature", 1.0), "c": ("temperature", 1.0),
+    "°c": ("temperature", 1.0), "c": ("temperature", 1.0), "k": ("temperature_k", 1.0),
     "°f": ("temperature_f", 1.0), "f": ("temperature_f", 1.0),
     "%": ("percentage", 1.0), "rpm": ("rotational_speed", 1.0),
 }
@@ -81,11 +81,14 @@ def _field(label: object, value: object, source: str, excerpt: str) -> Field | N
     number = float(match.group(1).replace(",", ""))
     unit = match.group(2)
     normalized_unit = (unit or "").lower().replace("μ", "µ")
-    spec = UNITS.get(normalized_unit)
+    spec = ("capacitance", 1.0) if normalized_unit == "f" and "capacitance" in name else UNITS.get(normalized_unit)
     if spec:
         dimension, factor = spec
         if dimension == "temperature_f":
             number = (number - 32.0) * 5.0 / 9.0
+            dimension = "temperature"
+        elif dimension == "temperature_k":
+            number -= 273.15
             dimension = "temperature"
         else:
             number *= factor
