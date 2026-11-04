@@ -299,7 +299,8 @@ def _compare_one(old: Field, new: Field, tolerances: dict[str, float]) -> tuple[
 
 def compare(reference_name: str, old: list[Field], revised_name: str,
             new: list[Field], tolerances: dict[str, float] | None = None) -> dict:
-    tolerances = tolerances or {}
+    if tolerances is None:
+        tolerances = {}
     allowed_dimensions = {
         "length", "pressure", "voltage", "current", "power", "frequency",
         "mass", "temperature", "percentage", "unitless", "unknown",
