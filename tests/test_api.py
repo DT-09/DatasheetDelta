@@ -7,7 +7,24 @@ def test_health_endpoint():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["version"] == "1.0.0"
+    assert response.json()["version"] == "1.1.0"
+
+def test_pages_origin_can_call_api():
+    response = client.options(
+        "/api/investigations",
+        headers={
+            "Origin": "https://datasheetdelta.pages.dev",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://datasheetdelta.pages.dev"
+
+def test_workspace_is_served_by_api_host():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Engineering revision intelligence" in response.text
 
 def test_investigation_endpoint_returns_traceable_findings():
     response = client.post(
