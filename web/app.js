@@ -4,6 +4,7 @@ const error = document.querySelector("#error");
 const results = document.querySelector("#results");
 const tokenInput = document.querySelector("#access-token");
 const reviewerInput = document.querySelector("#reviewer-name");
+const sampleButton = document.querySelector("#load-sample");
 let activeReport = null;
 let activeEvents = [];
 
@@ -107,3 +108,36 @@ function toCsv(report,events) {
   return rows.map(row=>row.map(value=>{const text=String(value??"");const formulaPrefix=["=", "+", "-", "@"].includes(text.trimStart()[0]) || [9,13].includes(text.charCodeAt(0));const safe=formulaPrefix?"'"+text:text;return '"'+safe.replace(/"/g,'""')+'"';}).join(",")).join("\r\n");
 }
 function download(filename,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const anchor=document.createElement("a");anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+sampleButton.addEventListener("click", async () => {
+  sampleButton.disabled = true;
+  error.hidden = true;
+  try {
+    const [referenceResponse, revisedResponse] = await Promise.all([
+      fetch("/examples/reference.csv"),
+      fetch("/examples/revised.csv")
+    ]);
+    if (!referenceResponse.ok || !revisedResponse.ok) throw new Error("Synthetic sample files are unavailable.");
+    const [referenceBuffer, revisedBuffer] = await Promise.all([
+      referenceResponse.arrayBuffer(),
+      revisedResponse.arrayBuffer()
+    ]);
+    const referenceFile = new File([referenceBuffer], "reference.csv", {type:"text/csv"});
+    const revisedFile = new File([revisedBuffer], "revised.csv", {type:"text/csv"});
+    for (const [selector, file] of [
+      ['input[name="reference"]', referenceFile],
+      ['input[name="revised"]', revisedFile]
+    ]) {
+      const input = form.querySelector(selector);
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      input.parentElement.querySelector("em").textContent = file.name;
+    }
+  } catch (exception) {
+    error.textContent = exception.message;
+    error.hidden = false;
+  } finally {
+    sampleButton.disabled = false;
+  }
+});
