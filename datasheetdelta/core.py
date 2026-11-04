@@ -279,10 +279,12 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
                 delta = abs(x.number - y.number)
                 status = "unchanged" if delta <= tolerance else "changed"
                 explanation = f"Compared after conversion to the common {x.dimension} base unit; absolute difference {delta:.6g}."
-            elif x.unit and y.unit and x.unit.lower() != y.unit.lower():
-                status, explanation = "unit_mismatch", "Units are missing, unknown or dimensionally incompatible; manual review required."
+            elif x.dimension or y.dimension or x.unit or y.unit:
+                status, explanation = "unit_mismatch", "A unit is missing, unknown or dimensionally incompatible; manual review required."
             else:
-                status, explanation = "changed", "Numeric value differs; unit equivalence could not be established."
+                delta = abs(x.number - y.number)
+                status = "unchanged" if delta <= tolerance else "changed"
+                explanation = f"Compared as unitless numeric values; absolute difference {delta:.6g}."
         else:
             status, explanation = "changed", "Text or value differs; assess engineering materiality."
         findings.append(Finding(key, status, x.value if x else None, y.value if y else None,
