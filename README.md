@@ -96,6 +96,14 @@ Only synthetic example files are included. No customer usage, accuracy rate, rec
     pip install -e ".[all]"
     pytest
 
+Browser acceptance suite (requires Chromium and a running app):
+
+    pip install -e ".[all,e2e]"
+    playwright install chromium
+    uvicorn datasheetdelta.api:app --reload
+    # In another terminal:
+    pytest e2e
+
 ## Container
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete Docker Compose deployment, persistent-volume backup and Cloudflare hosting boundary. Cloudflare Pages alone cannot run the Python API or SQLite review ledger.
