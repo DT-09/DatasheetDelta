@@ -28,6 +28,7 @@ NUM=re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?)\s*([A-Za-zÂ°%Â
 def _field(label,value,source,excerpt):
     label=re.sub(r"\s+"," ",label.strip().lower()).rstrip(":")
     if not label or not value.strip(): return None
+    if label in {"parameter","field","property","specification"} and value.strip().lower() in {"value","description","specification value"}: return None
     name=ALIASES.get(label,re.sub(r"[^a-z0-9]+","_",label).strip("_"))
     value=value.strip(); m=NUM.match(value)
     if m and m.group(1):
