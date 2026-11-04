@@ -95,3 +95,10 @@ def test_csv_parameter_value_unit_columns_keep_the_unit():
     values = {item.name: item.value for item in fields}
     assert values == {"pressure": "10 bar", "length": "25 mm"}
     assert fields[0].dimension == "pressure"
+
+
+def test_csv_export_neutralizes_spreadsheet_formulas():
+    from datasheetdelta.core import _spreadsheet_safe
+    assert _spreadsheet_safe("=HYPERLINK(\"https://example.invalid\")").startswith("'=")
+    assert _spreadsheet_safe("@SUM(1,2)").startswith("'@")
+    assert _spreadsheet_safe("normal text") == "normal text"
