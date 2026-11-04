@@ -11,7 +11,7 @@ DatasheetDelta compares two revisions of a supplier datasheet or engineering spe
 - Label canonicalization for a small, explicit alias set.
 - Conservative unit conversion for length, pressure, voltage, current, power, frequency, mass, temperature, percentage and rotational speed.
 - Added, removed, changed, unchanged, unit-mismatch and ambiguous classifications.
-- JSON and CSV exports, command-line interface and FastAPI upload service.
+- JSON, CSV and evidence-rich PDF exports, command-line interface and FastAPI upload service.
 - Browser workspace with filtering, reviewer decisions, reviewer notes and an annotated JSON review-package export.
 - Per-file upload limit, extension allowlist, request-memory processing and non-root Docker runtime.
 
@@ -23,7 +23,7 @@ Requires Python 3.10 or newer.
 python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
-pip install -e ".[api,documents,test]"
+pip install -e ".[api,documents,reports,test]"
 uvicorn datasheetdelta.api:app --host 127.0.0.1 --port 8000
 ```
 
@@ -35,7 +35,7 @@ Open http://127.0.0.1:8000. API documentation is at /api/docs; health check is /
 datasheetdelta examples/reference.csv examples/revised.csv --out reports/revision
 ```
 
-Creates JSON and CSV reports. Numeric tolerance is expressed in normalized base units where the dimensions are known:
+Creates JSON, CSV and PDF reports. Numeric tolerance is expressed in normalized base units where the dimensions are known:
 
 ```bash
 datasheetdelta reference.csv revised.csv --tolerance 0.01 --out reports/revision
@@ -47,6 +47,7 @@ datasheetdelta reference.csv revised.csv --tolerance 0.01 --out reports/revision
 - `POST /api/investigations` — multipart fields `reference`, `revised`, optional `tolerance`
 - `POST /api/reports/json` — same multipart fields, returns JSON attachment
 - `POST /api/reports/csv` — same multipart fields, returns CSV attachment
+- `POST /api/reports/pdf` — same multipart fields, returns a paginated evidence report
 
 The API accepts CSV, XLSX, DOCX, PDF, TXT and MD files up to 15 MB each. Invalid extensions, empty files and malformed documents return explicit HTTP errors.
 
@@ -90,7 +91,7 @@ The container runs as a non-root user and includes a health check. Production de
 ## Development and tests
 
 ```bash
-pip install -e ".[api,documents,test]"
+pip install -e ".[api,documents,reports,test]"
 pytest -q
 ```
 
