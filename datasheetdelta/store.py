@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,8 +30,21 @@ def _connect() -> sqlite3.Connection:
     return connection
 
 
+@contextmanager
+def _database():
+    connection = _connect()
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
 def initialize() -> None:
-    with _connect() as connection:
+    with _database() as connection:
         connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS investigations (
@@ -91,7 +105,7 @@ def save_investigation(report: dict[str, Any]) -> dict[str, Any]:
     return {"investigation_id": investigation_id, "created_at": created_at, "report_sha256": digest}
 
 
-def _read_events(connection: sqlite3.Connection, investigation_id: str) -> list[dict[str, Any]]:
+def _read_events(connection: sqlite3.Connection, investigation_id: str) -> tuple[list[dict[str, Any]], bool]:
     rows = connection.execute(
         """SELECT id, parameter, decision, reviewer, note, created_at,
                   previous_hash, event_hash
@@ -173,13 +187,9 @@ def add_review(
         ).fetchone()
         previous_hash = previous_row["event_hash"] if previous_row else GENESIS
         created_at = _now()
-        cursor = connection.execute(
-            """INSERT INTO review_events
-               (investigation_id, parameter, decision, reviewer, note, created_at, previous_hash, event_hash)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (investigation_id, parameter, decision, reviewer, note, created_at, previous_hash, "pending"),
-        )
-        event_id = cursor.lastrowid
+        event_id = connection.execute(
+            "SELECT COALESCE(MAX(id), 0) + 1 FROM review_events"
+        ).fetchone()[0]
         unsigned = {
             "id": event_id, "parameter": parameter, "decision": decision,
             "reviewer": reviewer, "note": note, "created_at": created_at,
@@ -189,7 +199,10 @@ def add_review(
             (previous_hash + _canonical(unsigned)).encode("utf-8")
         ).hexdigest()
         connection.execute(
-            "UPDATE review_events SET event_hash = ? WHERE id = ?", (event_hash, event_id)
+            """INSERT INTO review_events
+               (id, investigation_id, parameter, decision, reviewer, note, created_at, previous_hash, event_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (event_id, investigation_id, parameter, decision, reviewer, note, created_at, previous_hash, event_hash),
         )
     return {
         "id": event_id, "parameter": parameter, "decision": decision,
