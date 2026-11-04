@@ -54,7 +54,7 @@ UNITS = {
     "°f": ("temperature_f", 1.0), "f": ("temperature_f", 1.0),
     "%": ("percentage", 1.0), "rpm": ("rotational_speed", 1.0),
 }
-NUMBER = re.compile(r"^\\s*([-+]?(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?)\\s*([A-Za-z°%µμ/²³._-]+)?\\s*$")
+NUMBER = re.compile(r"^\s*([-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*([A-Za-z°%µμ/²³._-]+)?\s*$")
 HEADER_LABELS = {"parameter", "field", "property", "specification", "characteristic", "item", "description", "name", "attribute", "parameter name"}
 HEADER_VALUES = {"value", "values", "description", "specification value", "unit", "units", "nominal", "typical", "rated", "rating", "min", "minimum", "max", "maximum", "tolerance", "range", "notes"}
 
