@@ -23,6 +23,7 @@ def test_investigation_persists_report_and_review_chain(tmp_path, monkeypatch):
     assert record["report_integrity_valid"] is True
     assert record["review_chain_valid"] is True
     assert [event["id"] for event in record["review_events"]] == [first["id"], second["id"]]
+    assert all(event["event_hash"] and event["previous_hash"] for event in record["review_events"])
 
 
 def test_review_rejects_unknown_parameter_and_invalid_decision(tmp_path, monkeypatch):
