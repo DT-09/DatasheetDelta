@@ -20,3 +20,9 @@ button:disabled{opacity:.55;cursor:wait}
 .audit-state{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:15px 0;font-size:11px;color:var(--muted)}
 .danger{color:#8b352b;border-color:#c8a69b}
 @media(max-width:720px){.review-access{grid-template-columns:1fr}.audit-state{align-items:flex-start;flex-direction:column}}
+
+.sample-row{display:flex;align-items:center;gap:12px;margin-top:16px}
+.sample-row button{padding:9px 12px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.sample-row button:hover{border-color:var(--brass)}
+.sample-row button:disabled{opacity:.55;cursor:wait}
+@media(max-width:520px){.sample-row{align-items:flex-start;flex-direction:column;gap:6px}}
