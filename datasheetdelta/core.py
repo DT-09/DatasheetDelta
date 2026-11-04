@@ -312,11 +312,20 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
         ],
     }
 
+def _csv_safe(value: object) -> str:
+    text = "" if value is None else str(value)
+    probe = text.lstrip(" \\t\\r")
+    if probe.startswith(("=", "+", "@", "\\t", "\\r")):
+        return "'" + text
+    if probe.startswith("-") and not NUMBER.fullmatch(probe):
+        return "'" + text
+    return text
+
 def report_csv(result: dict) -> str:
     stream = io.StringIO(newline="")
     writer = csv.writer(stream)
     columns = ("parameter", "status", "reference", "revised", "reference_source", "revised_source", "reference_excerpt", "revised_excerpt", "explanation")
     writer.writerow(columns)
     for finding in result["findings"]:
-        writer.writerow([finding.get(key) for key in columns])
+        writer.writerow([_csv_safe(finding.get(key)) for key in columns])
     return stream.getvalue()
