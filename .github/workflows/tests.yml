@@ -24,3 +24,19 @@ jobs:
         run: pytest -q
       - name: Verify CLI entry point
         run: datasheetdelta --help
+      - name: Build distributable wheel
+        run: pip wheel . --no-deps --wheel-dir dist
+      - name: Build container image
+        run: docker build -t datasheetdelta:ci .
+      - name: Smoke-test container health endpoint
+        run: |
+          docker run -d --name datasheetdelta -p 8000:8000 datasheetdelta:ci
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8000/api/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs datasheetdelta
+          exit 1
+      - name: Remove smoke-test container
+        if: always()
+        run: docker rm -f datasheetdelta || true
