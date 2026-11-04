@@ -220,3 +220,16 @@ def delete_investigation(investigation_id: str) -> bool:
                BEGIN SELECT RAISE(ABORT, 'review events are append-only'); END"""
         )
         return cursor.rowcount > 0
+
+
+def list_investigations(limit: int = 50) -> list[dict[str, Any]]:
+    if not isinstance(limit, int) or limit < 1 or limit > 100:
+        raise ValueError("Investigation list limit must be between 1 and 100.")
+    initialize()
+    with _database() as connection:
+        rows = connection.execute(
+            """SELECT id, created_at, reference_name, revised_name, report_sha256
+               FROM investigations ORDER BY created_at DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+    return [dict(row) for row in rows]
