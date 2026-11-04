@@ -121,3 +121,8 @@ def test_tolerance_only_applies_to_its_own_dimension():
     assert result["findings"][0]["status"] == "changed"
     result = compare("a.csv", old, "b.csv", new, {"length": 0.2})
     assert result["findings"][0]["status"] == "unchanged"
+
+
+def test_non_finite_document_numeric_value_is_rejected():
+    with pytest.raises(ValueError, match="outside the supported range"):
+        extract("spec.csv", ("Parameter,Value\\nPressure," + ("9" * 500) + " bar\\n").encode())
