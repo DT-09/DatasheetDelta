@@ -9,7 +9,7 @@ DatasheetDelta compares two revisions of a supplier datasheet or engineering spe
 - CSV, XLSX, DOCX, text-based PDF, TXT and Markdown ingestion.
 - Source locations by row, worksheet, table, paragraph, PDF page/line or text line.
 - Label canonicalization for a small, explicit alias set.
-- Conservative unit conversion for length, pressure, voltage, current, power, frequency, mass, temperature, percentage and rotational speed.
+- Conservative unit conversion for length, pressure, voltage, current, power, frequency, mass, capacitance, temperature, percentage and rotational speed.
 - Added, removed, changed, unchanged, unit-mismatch and ambiguous classifications.
 - JSON, CSV and evidence-rich PDF exports, command-line interface and FastAPI upload service.
 - Browser workspace with filtering, reviewer decisions, reviewer notes and an annotated JSON review-package export.
