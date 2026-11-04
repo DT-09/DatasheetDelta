@@ -98,10 +98,8 @@ Only synthetic example files are included. No customer usage, accuracy rate, rec
 
 ## Container
 
-    docker build -t datasheetdelta .
-    docker run --rm -p 8000:8000 -e DATASHEETDELTA_ACCESS_TOKEN="your-long-random-secret" -v datasheetdelta-data:/data datasheetdelta
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete Docker Compose deployment, persistent-volume backup and Cloudflare hosting boundary. Cloudflare Pages alone cannot run the Python API or SQLite review ledger.
 
-The container stores its SQLite database under /data. Review TLS termination, network access, backups, token rotation and log retention before exposing it publicly.
 
 ## Release policy
 
