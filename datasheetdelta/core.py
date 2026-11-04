@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from collections import defaultdict
 from dataclasses import asdict, dataclass
@@ -31,6 +32,8 @@ UNITS = {
     "khz": ("frequency", 1000.0), "mhz": ("frequency", 1_000_000.0),
     "kg": ("mass", 1.0), "g": ("mass", 0.001),
     "°c": ("temperature", 1.0), "c": ("temperature", 1.0),
+    "°f": ("temperature_f", 1.0), "f": ("temperature_f", 1.0),
+    "k": ("temperature_k", 1.0),
     "%": ("percentage", 1.0),
 }
 NUMBER = re.compile(
@@ -87,6 +90,10 @@ def _field(label: str, value: str, source: str, excerpt: str) -> Field | None:
     unit_info = UNITS.get(unit_key)
     if unit_info:
         dimension, factor = unit_info
+        if dimension == "temperature_f":
+            return Field(name, clean_value, (number - 32.0) * 5.0 / 9.0, unit, "temperature", source, excerpt)
+        if dimension == "temperature_k":
+            return Field(name, clean_value, number - 273.15, unit, "temperature", source, excerpt)
         return Field(name, clean_value, number * factor, unit, dimension, source, excerpt)
     return Field(name, clean_value, number, unit, "unknown" if unit else None, source, excerpt)
 
@@ -215,18 +222,19 @@ def _compare_one(old: Field, new: Field, tolerance: float) -> tuple[str, str]:
         if old.dimension is None and new.dimension is None:
             status = "unchanged" if abs(old.number - new.number) <= tolerance else "changed"
             return status, "Unitless numeric values compared directly."
+        if old.dimension == new.dimension == "unknown" and (old.unit or "").lower() == (new.unit or "").lower():
+            status = "unchanged" if abs(old.number - new.number) <= tolerance else "changed"
+            return status, "Values use the same unrecognized unit; compared numerically without conversion."
         if old.dimension != new.dimension:
             return "unit_mismatch", "Units are missing or belong to different dimensions; manual review required."
-        return "unit_mismatch", "At least one unit is not in the supported conversion table."
+        return "unit_mismatch", "Units could not be safely normalized; manual review required."
     return "changed", "Text or value differs; assess materiality."
 
 
 def compare(reference_name: str, old: list[Field], revised_name: str,
             new: list[Field], tolerance: float = 0.0) -> dict:
-    if tolerance < 0:
-        raise ValueError("Tolerance must be non-negative.")
-    if not isinstance(tolerance, (int, float)):
-        raise ValueError("Tolerance must be numeric.")
+    if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("Tolerance must be a finite, non-negative number.")
     left: dict[str, list[Field]] = defaultdict(list)
     right: dict[str, list[Field]] = defaultdict(list)
     for field in old:
