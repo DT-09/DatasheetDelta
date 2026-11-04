@@ -332,7 +332,7 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
 
 def _spreadsheet_safe(value: object) -> str:
     text = "" if value is None else str(value)
-    if text.lstrip().startswith(("=", "+", "-", "@", "\\t", "\\r")):
+    if text.lstrip().startswith(("=", "+", "-", "@", chr(9), chr(13))):
         return "'" + text
     return text
 
