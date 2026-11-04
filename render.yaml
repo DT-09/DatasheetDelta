@@ -2,7 +2,7 @@ services:
   - type: web
     name: datasheetdelta-api
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -e ".[api,documents]"
     startCommand: uvicorn datasheetdelta.api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
