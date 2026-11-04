@@ -55,8 +55,8 @@ UNITS = {
     "%": ("percentage", 1.0), "rpm": ("rotational_speed", 1.0),
 }
 NUMBER = re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|[-+]?\.\d+)\s*([A-Za-z°%µμ/²³._-]+)?\s*$")
-HEADER_LABELS = {"parameter", "field", "property", "specification", "characteristic", "item", "description"}
-HEADER_VALUES = {"value", "values", "description", "specification value", "unit", "units"}
+HEADER_LABELS = {"parameter", "field", "property", "specification", "characteristic", "item", "description", "name", "attribute", "parameter name"}
+HEADER_VALUES = {"value", "values", "description", "specification value", "unit", "units", "nominal", "typical", "rated", "rating", "min", "minimum", "max", "maximum", "tolerance", "range", "notes"}
 
 def canonical_name(label: str) -> str:
     clean = re.sub(r"\s+", " ", label.strip().lower()).strip(" :")
@@ -96,17 +96,39 @@ def _add(fields: list[Field], label: object, value: object, source: str, excerpt
         fields.append(item)
 
 def _pairs_from_rows(rows: Iterable[tuple], prefix: str, fields: list[Field]) -> None:
-    for row_no, row in enumerate(rows, 1):
-        cells = list(row)
-        values = ["" if value is None else str(value).strip() for value in cells]
-        values = [value for value in values]
+    materialized = [[("" if value is None else str(value).strip()) for value in row] for row in rows]
+    if not materialized:
+        return
+    headers = [value.lower() for value in materialized[0]]
+    recognized = {"value", "values", "specification value", "unit", "units", "nominal", "typical", "rated", "rating", "min", "minimum", "max", "maximum", "tolerance", "range", "notes", "description"}
+    has_header = headers[0] in HEADER_LABELS and any(value in recognized for value in headers[1:])
+    if has_header:
+        for row_no, values in enumerate(materialized[1:], 2):
+            if not values or not values[0]:
+                continue
+            label = values[0]
+            unit_index = next((i for i, name in enumerate(headers) if name in {"unit", "units"}), None)
+            unit = values[unit_index] if unit_index is not None and unit_index < len(values) else ""
+            source = f"{prefix}row {row_no}"
+            excerpt_parts = []
+            for index, header in enumerate(headers[1:], 1):
+                if index >= len(values) or not values[index] or header in {"unit", "units"}:
+                    continue
+                value = values[index]
+                if unit and header not in {"notes", "description"} and not re.search(r"[A-Za-z°%]", value):
+                    value = f"{value} {unit}"
+                excerpt_parts.append(f"{header}: {value}")
+                field_name = label if header in {"value", "values", "specification value"} else f"{label} {header}"
+                _add(fields, field_name, value, source, f"{label} — " + "; ".join(excerpt_parts))
+        return
+    for row_no, values in enumerate(materialized, 1):
         if len(values) < 2:
             continue
         # Support ordinary two-column tables and repeated label/value pairs.
         for offset in range(0, len(values) - 1, 2):
             label, value = values[offset], values[offset + 1]
             if label and value:
-                source = f"{prefix}row {row_no}" if prefix.endswith("!") else f"{prefix}row {row_no}"
+                source = f"{prefix}row {row_no}"
                 _add(fields, label, value, source, f"{label}: {value}")
 
 def _validate_container(ext: str, content: bytes) -> None:
