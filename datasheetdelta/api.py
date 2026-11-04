@@ -1,6 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI,File,Form,HTTPException,UploadFile
-from fastapi.responses import Response\nfrom fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from .core import extract,compare,report_csv
 import json
 app=FastAPI(title="DatasheetDelta",version="0.1.0")
@@ -24,4 +25,5 @@ async def export(kind:str,reference:UploadFile=File(...),revised:UploadFile=File
  an,af,aw=await read_doc(reference); bn,bf,bw=await read_doc(revised); result=compare(an,af,bn,bf,tolerance); result["warnings"]=aw+bw
  body=json.dumps(result,indent=2) if kind=="json" else report_csv(result)
  return Response(body,media_type="application/json" if kind=="json" else "text/csv",headers={"Content-Disposition":f"attachment; filename=datasheetdelta.{kind}"})
-\napp.mount('/', StaticFiles(directory='web', html=True), name='web')\n
+
+app.mount('/', StaticFiles(directory='web', html=True), name='web')
