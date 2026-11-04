@@ -307,11 +307,20 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
     }
     if not isinstance(tolerances, dict):
         raise ValueError("Tolerances must be a mapping of dimensions to numeric values.")
+    normalized_tolerances: dict[str, float] = {}
     for dimension, value in tolerances.items():
         if dimension not in allowed_dimensions:
             raise ValueError(f"Unsupported tolerance dimension: {dimension}.")
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"Tolerance for {dimension} must be a finite, non-negative number.")
+        try:
+            numeric_value = float(value)
+        except (OverflowError, ValueError):
+            raise ValueError(f"Tolerance for {dimension} must be a finite, non-negative number.")
+        if not math.isfinite(numeric_value) or numeric_value < 0:
+            raise ValueError(f"Tolerance for {dimension} must be a finite, non-negative number.")
+        normalized_tolerances[dimension] = numeric_value
+    tolerances = normalized_tolerances
     left: dict[str, list[Field]] = defaultdict(list)
     right: dict[str, list[Field]] = defaultdict(list)
     for field in old:
@@ -341,7 +350,7 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
         "review_required": True,
         "method": "deterministic label/value extraction and comparison",
         "tolerances": {key: float(value) for key, value in sorted(tolerances.items())},
-        "tolerance_policy": "absolute, dimension-specific tolerances in the base unit for each dimension; omitted dimensions use exact comparison",
+        "tolerance_policy": "absolute, dimension-specific tolerances; known dimensions use their base unit, and omitted dimensions use exact comparison",
     }
 
 
