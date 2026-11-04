@@ -1,9 +1,51 @@
-import argparse,json
-from pathlib import Path
-from .core import extract,compare,report_csv
+from __future__ import annotations
 
-def main():
- p=argparse.ArgumentParser(description="Compare engineering specification revisions"); p.add_argument("reference"); p.add_argument("revised"); p.add_argument("--out",default="datasheetdelta-report"); a=p.parse_args()
- x=Path(a.reference); y=Path(a.revised); old,w1=extract(x.name,x.read_bytes()); new,w2=extract(y.name,y.read_bytes()); result=compare(x.name,old,y.name,new); result["warnings"]=w1+w2
- base=Path(a.out); base.parent.mkdir(parents=True,exist_ok=True); base.with_suffix(".json").write_text(json.dumps(result,indent=2)); base.with_suffix(".csv").write_text(report_csv(result)); print(f"Compared {len(result['findings'])} fields; reports saved with prefix {base}.")
-if __name__=="__main__": main()
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from .core import compare, extract, report_csv
+from .reports import report_pdf
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Compare two engineering specification revisions.")
+    parser.add_argument("reference", help="Reference/original document")
+    parser.add_argument("revised", help="Revised document")
+    parser.add_argument("--out", default="datasheetdelta-report", help="Output path prefix (default: datasheetdelta-report)")
+    parser.add_argument("--tolerance", type=float, default=0.0, help="Absolute tolerance in normalized base units")
+    args = parser.parse_args()
+    if args.tolerance < 0:
+        parser.error("--tolerance must be non-negative")
+    reference, revised = Path(args.reference), Path(args.revised)
+    for path in (reference, revised):
+        if not path.is_file():
+            parser.error(f"Input file does not exist: {path}")
+    try:
+        old_fields, old_warnings = extract(reference.name, reference.read_bytes())
+        new_fields, new_warnings = extract(revised.name, revised.read_bytes())
+        result = compare(reference.name, old_fields, revised.name, new_fields, args.tolerance)
+    except (OSError, ValueError) as exc:
+        print(f"DatasheetDelta: {exc}", file=sys.stderr)
+        return 2
+    result["warnings"] = old_warnings + new_warnings
+    result["tolerance"] = {"value": args.tolerance, "basis": "normalized base units where dimensions are known"}
+    base = Path(args.out)
+    base.parent.mkdir(parents=True, exist_ok=True)
+    json_path, csv_path, pdf_path = base.with_suffix(".json"), base.with_suffix(".csv"), base.with_suffix(".pdf")
+    json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    csv_path.write_text(report_csv(result), encoding="utf-8-sig", newline="")
+    try:
+        pdf_path.write_bytes(report_pdf(result))
+    except ValueError as exc:
+        print(f"PDF report unavailable: {exc}", file=sys.stderr)
+        return 2
+    print(f"Compared {len(result['findings'])} parameters.")
+    print(f"JSON: {json_path}")
+    print(f"CSV:  {csv_path}")
+    print(f"PDF:  {pdf_path}")
+    print("Human engineering review is required before relying on any finding.")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,7 +1,164 @@
-const form=document.querySelector('#form'),progress=document.querySelector('#progress'),error=document.querySelector('#error'),results=document.querySelector('#results');
-for(const input of form.querySelectorAll('input[type=file]'))input.addEventListener('change',()=>input.parentElement.querySelector('em').textContent=input.files[0]?.name||'Choose document');
-const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-form.addEventListener('submit',async e=>{e.preventDefault();error.hidden=true;results.hidden=true;progress.hidden=false;try{const r=await fetch('/api/investigations',{method:'POST',body:new FormData(form)});const data=await r.json();if(!r.ok)throw Error(data.detail||'Investigation failed');render(data)}catch(ex){error.textContent=ex.message+' — check that the API is running and document dependencies are installed.';error.hidden=false}finally{progress.hidden=true}});
-function render(r){const f=r.findings,counts={};f.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);const ordered=[...f.filter(x=>x.status!=='unchanged'),...f.filter(x=>x.status==='unchanged')];results.innerHTML=`<div class="result-head"><div><p class="eyebrow">02 / INVESTIGATION RESULT</p><h2>Change register</h2><p class="micro">${esc(r.reference_file)} → ${esc(r.revised_file)}</p></div><div class="actions"><button id="json">Export JSON</button><button id="csv">Export CSV</button></div></div><div class="metrics">${[['Compared',f.length],['Changed',counts.changed||0],['Added',counts.added||0],['Removed',counts.removed||0],['Unchanged',counts.unchanged||0]].map(([k,v])=>`<div class="metric"><b>${v}</b>${k}</div>`).join('')}</div><div class="table-wrap"><table><thead><tr><th>FIELD</th><th>STATUS</th><th>REFERENCE</th><th>REVISED</th><th>REFERENCE SOURCE</th><th>REVISED SOURCE</th><th>EXPLANATION</th></tr></thead><tbody>${ordered.map(x=>`<tr><td><b>${esc(x.parameter)}</b></td><td><span class="pill">${esc(x.status)}</span></td><td>${esc(x.reference)}</td><td>${esc(x.revised)}</td><td class="evidence">${esc(x.reference_source)}</td><td class="evidence">${esc(x.revised_source)}</td><td>${esc(x.explanation)}</td></tr>`).join('')}</tbody></table></div>${(r.warnings||[]).map(x=>`<p class="error">${esc(x)}</p>`).join('')}<p class="micro">Extraction is not proof of completeness. Review source documents. This tool does not certify safety, compliance or engineering suitability.</p>`;results.hidden=false;results.scrollIntoView({behavior:'smooth'});document.querySelector('#json').onclick=()=>download('datasheetdelta.json',JSON.stringify(r,null,2),'application/json');document.querySelector('#csv').onclick=()=>download('datasheetdelta.csv',csv(r),'text/csv')}
-function csv(r){const rows=[['parameter','status','reference','revised','reference_source','revised_source','explanation'],...r.findings.map(x=>[x.parameter,x.status,x.reference,x.revised,x.reference_source,x.revised_source,x.explanation])];return rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n')}
-function download(name,body,type){const u=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)}
+const form = document.querySelector("#form");
+const progress = document.querySelector("#progress");
+const error = document.querySelector("#error");
+const results = document.querySelector("#results");
+let currentReport = null;
+let review = {};
+let reviewerName = "";
+
+for (const input of form.querySelectorAll('input[type="file"]')) {
+  input.addEventListener("change", () => {
+    input.parentElement.querySelector("em").textContent = input.files[0]?.name || "Choose document";
+  });
+}
+
+const esc = value => String(value ?? "—").replace(/[&<>"']/g, char => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[char]));
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  error.hidden = true;
+  results.hidden = true;
+  progress.hidden = false;
+  try {
+    const response = await fetch("/api/investigations", { method: "POST", body: new FormData(form) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Investigation failed.");
+    currentReport = payload;
+    review = {};
+    reviewerName = "";
+    render(payload);
+  } catch (exception) {
+    error.textContent = exception.message + " Check the API service and optional document dependencies.";
+    error.hidden = false;
+  } finally {
+    progress.hidden = true;
+  }
+});
+
+function render(report) {
+  const findings = report.findings || [];
+  const counts = {};
+  findings.forEach(item => counts[item.status] = (counts[item.status] || 0) + 1);
+  results.innerHTML = `
+    <div class="result-head">
+      <div><p class="eyebrow">02 / INVESTIGATION RESULT</p><h2>Change register</h2>
+      <p class="micro">${esc(report.reference_file)} → ${esc(report.revised_file)}</p></div>
+      <div class="actions"><button id="export-review">Reviewed package</button><button id="export-pdf">PDF report</button><button id="export-json">JSON</button><button id="export-csv">CSV</button></div>
+    </div>
+    <div class="metrics">${[["Compared",findings.length],["Changed",counts.changed||0],["Added",counts.added||0],["Removed",counts.removed||0],["Ambiguous",counts.ambiguous||0],["Unchanged",counts.unchanged||0]].map(([label,value])=>`<div class="metric"><b>${value}</b>${label}</div>`).join("")}</div>
+    <div class="review-tools">
+      <label>Filter <select id="status-filter"><option value="all">All findings</option><option value="changed">Changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="ambiguous">Ambiguous</option><option value="unit_mismatch">Unit mismatch</option><option value="unchanged">Unchanged</option></select></label>
+      <label>Reviewer (self-reported) <input id="reviewer-name" type="text" maxlength="120" placeholder="Reviewer name"></label>
+      <label>Find parameter <input id="search-filter" type="search" placeholder="Search names or values"></label>
+      <span class="micro">Review decisions stay in this browser session until exported.</span>
+    </div>
+    <div id="finding-list" class="finding-list"></div>
+    ${(report.warnings||[]).map(message=>`<p class="warning">${esc(message)}</p>`).join("")}
+    <div class="limitations"><b>Interpretation boundary</b><p>A difference is not automatically a defect. Extraction may miss content outside supported structures. Verify each result against the source document. DatasheetDelta does not infer engineering impact, safety or compliance.</p></div>`;
+  results.hidden = false;
+  document.querySelector("#status-filter").addEventListener("change", drawFindings);
+  document.querySelector("#search-filter").addEventListener("input", drawFindings);
+  document.querySelector("#reviewer-name").addEventListener("input", event => { reviewerName = event.target.value.trim(); });
+  document.querySelector("#export-pdf").onclick = exportPdf;
+  document.querySelector("#export-json").onclick = () => download("datasheetdelta.json", JSON.stringify(report, null, 2), "application/json");
+  document.querySelector("#export-csv").onclick = () => download("datasheetdelta.csv", toCsv(report), "text/csv;charset=utf-8");
+  document.querySelector("#export-review").onclick = () => {
+    const packageData = {...report, human_review: {
+      reviewer_name: reviewerName || null,
+      exported_at_utc: new Date().toISOString(),
+      findings: findings.map(item => ({
+        parameter: item.parameter,
+        status: item.status,
+        decision: review[item.parameter]?.decision || "not_reviewed",
+        note: review[item.parameter]?.note || ""
+      }))
+    }};
+    download("datasheetdelta-reviewed-package.json", JSON.stringify(packageData, null, 2), "application/json");
+  };
+  drawFindings();
+  results.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function drawFindings() {
+  const filter = document.querySelector("#status-filter").value;
+  const query = document.querySelector("#search-filter").value.trim().toLowerCase();
+  const selected = currentReport.findings.filter(item => {
+    const matchesStatus = filter === "all" || item.status === filter;
+    const searchable = [item.parameter,item.reference,item.revised,item.explanation].join(" ").toLowerCase();
+    return matchesStatus && searchable.includes(query);
+  });
+  document.querySelector("#finding-list").innerHTML = selected.length ? selected.map((item,index) => {
+    const state = review[item.parameter] || {};
+    return `<article class="finding">
+      <div class="finding-heading"><div><span class="pill ${esc(item.status)}">${esc(item.status.replace("_"," "))}</span><h3>${esc(item.parameter.replaceAll("_"," "))}</h3></div>
+      <span class="micro">Finding ${index+1} / ${selected.length}</span></div>
+      <div class="comparison"><div><small>REFERENCE</small><b>${esc(item.reference)}</b><p>${esc(item.reference_source)}</p><p class="source-excerpt">${esc(item.reference_excerpt)}</p></div><div><small>REVISED</small><b>${esc(item.revised)}</b><p>${esc(item.revised_source)}</p><p class="source-excerpt">${esc(item.revised_excerpt)}</p></div></div>
+      <p class="explanation">${esc(item.explanation)}</p>
+      <div class="review-fields"><label>Engineering review decision<select data-decision="${esc(item.parameter)}">
+        <option value="not_reviewed" ${!state.decision||state.decision==="not_reviewed"?"selected":""}>Not reviewed</option>
+        <option value="confirmed" ${state.decision==="confirmed"?"selected":""}>Confirmed against source</option>
+        <option value="investigate" ${state.decision==="investigate"?"selected":""}>Requires investigation</option>
+        <option value="not_applicable" ${state.decision==="not_applicable"?"selected":""}>Not applicable</option>
+      </select></label><label>Reviewer note<textarea data-note="${esc(item.parameter)}" rows="2" placeholder="Record context or follow-up">${esc(state.note||"")}</textarea></label></div>
+    </article>`;
+  }).join("") : '<p class="micro">No findings match this filter.</p>';
+  document.querySelectorAll("[data-decision]").forEach(control => control.addEventListener("change", event => {
+    const key = event.target.dataset.decision;
+    review[key] = {...review[key], decision:event.target.value};
+  }));
+  document.querySelectorAll("[data-note]").forEach(control => control.addEventListener("input", event => {
+    const key = event.target.dataset.note;
+    review[key] = {...review[key], note:event.target.value};
+  }));
+}
+
+function csvSafe(value) {
+  const text = String(value ?? "");
+  const probe = text.replace(/^[ \t\r]+/, "");
+  const negativeNumber = /^-(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?(?:\s*[A-Za-z°%µμ/²³._-]+)?$/;
+  if (/^[=+@\t\r]/.test(probe) || (probe.startsWith("-") && !negativeNumber.test(probe))) return "'" + text;
+  return text;
+}
+
+function toCsv(report) {
+  const columns = ["parameter","status","reference","revised","reference_source","revised_source","reference_excerpt","revised_excerpt","explanation"];
+  const rows = [columns, ...report.findings.map(item => columns.map(column => item[column] ?? ""))];
+  return rows.map(row => row.map(value => '"' + csvSafe(value).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+}
+function download(filename, content, type) {
+  const url = URL.createObjectURL(new Blob([content], {type}));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportPdf() {
+  const button = document.querySelector("#export-pdf");
+  button.disabled = true;
+  button.textContent = "Preparing PDF…";
+  try {
+    const response = await fetch("/api/reports/pdf", {method:"POST", body:new FormData(form)});
+    if (!response.ok) {
+      let message = "PDF export failed.";
+      try { const payload = await response.json(); message = payload.detail || message; } catch {}
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "datasheetdelta-report.pdf";
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (exception) {
+    error.textContent = exception.message;
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = "PDF report";
+  }
+}

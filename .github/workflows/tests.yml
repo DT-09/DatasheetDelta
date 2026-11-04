@@ -1,15 +1,55 @@
-name: tests
+name: quality
+
 on:
   push:
-    branches: [main]
+    branches: [main, "engineering/**"]
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - run: pip install -e . pytest
-      - run: pytest
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install application and test dependencies
+        run: pip install -e ".[api,documents,reports,test]"
+      - name: Run regression suite
+        run: pytest -q
+      - name: Verify CLI entry point
+        run: datasheetdelta --help
+      - name: Validate browser JavaScript syntax
+        run: node --check web/app.js
+      - name: Build distributable wheel
+        run: pip wheel . --no-deps --wheel-dir dist
+      - name: Verify packaged workspace assets
+        run: |
+          python - <<'PY'
+          from glob import glob
+          from zipfile import ZipFile
+          wheel = glob("dist/*.whl")[0]
+          with ZipFile(wheel) as archive:
+              names = set(archive.namelist())
+          required = {f"datasheetdelta/static/{name}" for name in ("index.html", "styles.css", "app.js")}
+          assert required.issubset(names), required - names
+          PY
+      - name: Build container image
+        run: docker build -t datasheetdelta:ci .
+      - name: Smoke-test container health endpoint
+        run: |
+          docker run -d --name datasheetdelta -p 8000:8000 datasheetdelta:ci
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8000/api/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs datasheetdelta
+          exit 1
+      - name: Remove smoke-test container
+        if: always()
+        run: docker rm -f datasheetdelta || true

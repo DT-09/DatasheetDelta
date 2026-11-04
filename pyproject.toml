@@ -1,19 +1,30 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
 [project]
 name = "datasheetdelta"
-version = "0.1.0"
+version = "0.2.0.dev0"
+description = "Evidence-led engineering specification revision comparison"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
 dependencies = []
+
 [project.optional-dependencies]
 api = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "python-multipart>=0.0.9"]
 documents = ["pypdf>=4", "python-docx>=1.1", "openpyxl>=3.1"]
-test = ["pytest>=8"]
+reports = ["reportlab>=4.2"]
+test = ["pytest>=8", "httpx>=0.27"]
+
 [project.scripts]
 datasheetdelta = "datasheetdelta.cli:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["datasheetdelta*"]
+
+[tool.setuptools.package-data]
+datasheetdelta = ["static/*"]
