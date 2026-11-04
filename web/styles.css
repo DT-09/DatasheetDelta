@@ -26,3 +26,18 @@ button:disabled{opacity:.55;cursor:wait}
 .sample-row button:hover{border-color:var(--brass)}
 .sample-row button:disabled{opacity:.55;cursor:wait}
 @media(max-width:520px){.sample-row{align-items:flex-start;flex-direction:column;gap:6px}}
+
+.document-page{max-width:900px;margin:0 auto}
+.page-hero{padding:100px 0 70px;border-bottom:1px solid var(--line)}
+.page-hero h1{font-size:clamp(48px,7vw,78px)}
+.document-section{padding:52px 0;border-bottom:1px solid var(--line);max-width:820px}
+.document-section h2{font-size:clamp(32px,4vw,46px);margin:14px 0 22px}
+.document-section p,.document-section li,.definitions dd{color:var(--muted);font-size:15px;line-height:1.8}
+.document-section ul,.document-section ol{padding-left:22px}
+.document-section li{margin:8px 0}
+.definitions{display:grid;grid-template-columns:150px 1fr;gap:12px 22px}
+.definitions dt{font:20px Georgia,serif;color:var(--ink)}
+.definitions dd{margin:0}
+footer p a{color:var(--muted);text-decoration:none}
+footer p a:hover{color:var(--ink)}
+@media(max-width:720px){.page-hero{padding:72px 0 48px}.document-section{padding:38px 0}.definitions{grid-template-columns:1fr;gap:4px}.definitions dd{margin-bottom:12px}}
