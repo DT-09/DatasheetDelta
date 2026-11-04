@@ -73,3 +73,28 @@ def test_pdf_export_endpoint_returns_pdf_document():
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.content.startswith(b"%PDF-")
+
+
+def test_upload_limit_is_enforced(monkeypatch):
+    import datasheetdelta.api as api_module
+
+    monkeypatch.setattr(api_module, "MAX_FILE_BYTES", 8)
+    response = client.post(
+        "/api/investigations",
+        files={
+            "reference": ("old.csv", b"Pressure,10 bar", "text/csv"),
+            "revised": ("new.csv", b"Pressure,12 bar", "text/csv"),
+        },
+    )
+    assert response.status_code == 413
+
+def test_non_finite_tolerance_is_rejected():
+    response = client.post(
+        "/api/investigations",
+        files={
+            "reference": ("old.csv", b"Pressure,10 bar", "text/csv"),
+            "revised": ("new.csv", b"Pressure,12 bar", "text/csv"),
+        },
+        data={"tolerance": "nan"},
+    )
+    assert response.status_code == 422
