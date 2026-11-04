@@ -58,6 +58,15 @@
         </label>
         <button class="primary" type="submit">Run comparison ↗</button>
       </div>
+      <div class="review-access">
+        <label>Workspace access token
+          <input id="access-token" type="password" autocomplete="off" placeholder="Required when review storage is enabled">
+          <span class="micro">Sent only to this server. Kept in this browser tab's session storage.</span>
+        </label>
+        <label>Reviewer name
+          <input id="reviewer-name" type="text" maxlength="120" placeholder="Name recorded with review decisions">
+        </label>
+      </div>
     </form>
     <p id="progress" role="status" aria-live="polite" hidden>Extracting supported fields and comparing evidence…</p>
     <p id="error" class="error" role="alert" hidden></p>
