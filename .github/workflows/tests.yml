@@ -24,6 +24,8 @@ jobs:
         run: pytest -q
       - name: Verify CLI entry point
         run: datasheetdelta --help
+      - name: Validate browser JavaScript syntax
+        run: node --check web/app.js
       - name: Build distributable wheel
         run: pip wheel . --no-deps --wheel-dir dist
       - name: Verify packaged workspace assets
