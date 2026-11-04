@@ -276,7 +276,9 @@ def _display(fields: list[Field]) -> tuple[str | None, str | None]:
     )
 
 
-def _compare_one(old: Field, new: Field, tolerance: float) -> tuple[str, str]:
+def _compare_one(old: Field, new: Field, tolerances: dict[str, float]) -> tuple[str, str]:
+    dimension = old.dimension or "unitless"
+    tolerance = tolerances.get(dimension, 0.0)
     if old.value == new.value:
         return "unchanged", "Extracted values are identical."
     if old.number is not None and new.number is not None:
@@ -296,9 +298,19 @@ def _compare_one(old: Field, new: Field, tolerance: float) -> tuple[str, str]:
 
 
 def compare(reference_name: str, old: list[Field], revised_name: str,
-            new: list[Field], tolerance: float = 0.0) -> dict:
-    if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
-        raise ValueError("Tolerance must be a finite, non-negative number.")
+            new: list[Field], tolerances: dict[str, float] | None = None) -> dict:
+    tolerances = tolerances or {}
+    allowed_dimensions = {
+        "length", "pressure", "voltage", "current", "power", "frequency",
+        "mass", "temperature", "percentage", "unitless", "unknown",
+    }
+    if not isinstance(tolerances, dict):
+        raise ValueError("Tolerances must be a mapping of dimensions to numeric values.")
+    for dimension, value in tolerances.items():
+        if dimension not in allowed_dimensions:
+            raise ValueError(f"Unsupported tolerance dimension: {dimension}.")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"Tolerance for {dimension} must be a finite, non-negative number.")
     left: dict[str, list[Field]] = defaultdict(list)
     right: dict[str, list[Field]] = defaultdict(list)
     for field in old:
@@ -318,7 +330,7 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
             status = "ambiguous"
             explanation = "Multiple extracted entries share this parameter label. Resolve the source entries before comparison."
         else:
-            status, explanation = _compare_one(a[0], b[0], float(tolerance))
+            status, explanation = _compare_one(a[0], b[0], tolerances)
         findings.append(Finding(key, status, av, bv, asource, bsource, explanation))
     return {
         "reference_file": reference_name,
@@ -327,7 +339,8 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
         "warnings": [],
         "review_required": True,
         "method": "deterministic label/value extraction and comparison",
-        "tolerance": {"value": float(tolerance), "meaning": "absolute tolerance in normalized base units; applied only to compatible numeric dimensions"},
+        "tolerances": {key: float(value) for key, value in sorted(tolerances.items())},
+        "tolerance_policy": "absolute, dimension-specific tolerances in the base unit for each dimension; omitted dimensions use exact comparison",
     }
 
 
