@@ -22,3 +22,5 @@
 .limitations{margin-top:20px;padding:16px;border-left:2px solid var(--brass);background:var(--paper)}
 .limitations p{font-size:12px;color:var(--muted);margin-bottom:0}
 @media(max-width:720px){.comparison,.review-fields{grid-template-columns:1fr}.finding{padding:13px}.finding-heading{align-items:flex-start;flex-direction:column}.actions{flex-wrap:wrap}.review-tools input,.review-tools select{width:100%}}
+
+.source-excerpt{padding:8px;background:#f3f0e7;border-left:2px solid var(--brass);font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
