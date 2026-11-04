@@ -38,3 +38,19 @@ def test_docx_table_extraction_preserves_table_and_row_location():
     assert fields[0].value == "Stainless steel"
     assert fields[0].source == "table 1, row 2"
     assert not warnings
+
+
+def test_docx_three_column_table_keeps_units():
+    document = Document()
+    table = document.add_table(rows=2, cols=3)
+    for column, value in enumerate(["Parameter", "Value", "Unit"]):
+        table.cell(0, column).text = value
+    for column, value in enumerate(["Pressure", "10", "bar"]):
+        table.cell(1, column).text = value
+    buffer = BytesIO()
+    document.save(buffer)
+
+    fields, _ = extract("spec.docx", buffer.getvalue())
+    assert len(fields) == 1
+    assert fields[0].value == "10 bar"
+    assert fields[0].dimension == "pressure"
