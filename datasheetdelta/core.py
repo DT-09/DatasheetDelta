@@ -1,7 +1,45 @@
 from __future__ import annotations
-import csv, io, re
+
+import csv
+import io
+import re
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Iterable
+
+ALIASES = {
+    "max pressure": "maximum_pressure",
+    "maximum pressure": "maximum_pressure",
+    "operating pressure": "operating_pressure",
+    "rated voltage": "rated_voltage",
+    "max temperature": "maximum_temperature",
+    "maximum temperature": "maximum_temperature",
+    "operating temperature": "operating_temperature",
+    "ip rating": "ingress_protection",
+}
+UNITS = {
+    "mm": ("length", 1.0), "cm": ("length", 10.0),
+    "m": ("length", 1000.0), "in": ("length", 25.4),
+    "inch": ("length", 25.4), "pa": ("pressure", 1.0),
+    "kpa": ("pressure", 1000.0), "mpa": ("pressure", 1_000_000.0),
+    "bar": ("pressure", 100_000.0), "psi": ("pressure", 6894.757293),
+    "v": ("voltage", 1.0), "mv": ("voltage", 0.001),
+    "kv": ("voltage", 1000.0), "a": ("current", 1.0),
+    "ma": ("current", 0.001), "w": ("power", 1.0),
+    "kw": ("power", 1000.0), "hz": ("frequency", 1.0),
+    "khz": ("frequency", 1000.0), "mhz": ("frequency", 1_000_000.0),
+    "kg": ("mass", 1.0), "g": ("mass", 0.001),
+    "°c": ("temperature", 1.0), "c": ("temperature", 1.0),
+    "%": ("percentage", 1.0),
+}
+NUMBER = re.compile(
+    r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
+    r"([A-Za-z°%µμ/²³._-]+)?\s*$"
+)
+HEADER_LABELS = {"parameter", "field", "property", "specification", "name", "item"}
+HEADER_VALUES = {"value", "description", "specification value", "current value"}
+
 
 @dataclass
 class Field:
@@ -9,8 +47,10 @@ class Field:
     value: str
     number: float | None
     unit: str | None
+    dimension: str | None
     source: str
     excerpt: str
+
 
 @dataclass
 class Finding:
@@ -22,82 +62,215 @@ class Finding:
     revised_source: str | None
     explanation: str
 
-ALIASES={"max pressure":"maximum_pressure","maximum pressure":"maximum_pressure","operating pressure":"operating_pressure","rated voltage":"rated_voltage","max temperature":"maximum_temperature","maximum temperature":"maximum_temperature","operating temperature":"operating_temperature","ip rating":"ingress_protection"}
-FACTORS={"mm":("length",1),"cm":("length",10),"m":("length",1000),"in":("length",25.4),"inch":("length",25.4),"pa":("pressure",1),"kpa":("pressure",1000),"mpa":("pressure",1000000),"bar":("pressure",100000),"psi":("pressure",6894.757293),"v":("voltage",1),"mv":("voltage",.001),"kv":("voltage",1000),"a":("current",1),"ma":("current",.001),"w":("power",1),"kw":("power",1000),"hz":("frequency",1),"khz":("frequency",1000),"mhz":("frequency",1000000),"kg":("mass",1),"g":("mass",.001),"°c":("temperature",1),"c":("temperature",1),"%":("percentage",1)}
-NUM=re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?)\s*([A-Za-z°%µμ/²³._-]+)?\s*$")
-def _field(label,value,source,excerpt):
-    label=re.sub(r"\s+"," ",label.strip().lower()).rstrip(":")
-    if not label or not value.strip(): return None
-    if label in {"parameter","field","property","specification"} and value.strip().lower() in {"value","description","specification value"}: return None
-    name=ALIASES.get(label,re.sub(r"[^a-z0-9]+","_",label).strip("_"))
-    value=value.strip(); m=NUM.match(value)
-    if m and m.group(1):
-        n=float(m.group(1).replace(",","")); unit=m.group(2); factor=FACTORS.get((unit or "").lower())
-        if factor: return Field(name,value,n*factor[1],unit,source,excerpt)
-        return Field(name,value,n,unit,source,excerpt)
-    return Field(name,value,None,None,source,excerpt)
-def extract(filename:str,content:bytes):
-    ext=Path(filename).suffix.lower(); fields=[]; warnings=[]
-    def add(label,value,loc,line):
-        f=_field(str(label or ""),str(value or ""),loc,line)
-        if f: fields.append(f)
-    if ext==".csv":
-        text=content.decode("utf-8-sig"); rows=csv.reader(io.StringIO(text))
-        for i,row in enumerate(rows,1):
-            if len(row)>=2: add(row[0],row[1],f"row {i}",f"{row[0]}: {row[1]}")
-    elif ext in {".txt",".md"}:
-        for i,line in enumerate(content.decode("utf-8-sig").splitlines(),1):
+
+def _normalise_label(label: str) -> str:
+    cleaned = re.sub(r"\s+", " ", label.strip().lower()).rstrip(":")
+    return ALIASES.get(cleaned, re.sub(r"[^a-z0-9]+", "_", cleaned).strip("_"))
+
+
+def _field(label: str, value: str, source: str, excerpt: str) -> Field | None:
+    if not label.strip() or not value.strip():
+        return None
+    clean_label = re.sub(r"\s+", " ", label.strip().lower()).rstrip(":")
+    clean_value = value.strip()
+    if clean_label in HEADER_LABELS and clean_value.lower() in HEADER_VALUES:
+        return None
+    name = _normalise_label(label)
+    if not name:
+        return None
+    match = NUMBER.match(clean_value)
+    if not match:
+        return Field(name, clean_value, None, None, None, source, excerpt)
+    number = float(match.group(1).replace(",", ""))
+    unit = match.group(2)
+    unit_key = (unit or "").lower()
+    unit_info = UNITS.get(unit_key)
+    if unit_info:
+        dimension, factor = unit_info
+        return Field(name, clean_value, number * factor, unit, dimension, source, excerpt)
+    return Field(name, clean_value, number, unit, "unknown" if unit else None, source, excerpt)
+
+
+def _add(fields: list[Field], label: object, value: object, source: str, excerpt: str) -> None:
+    field = _field(str(label or ""), str(value or ""), source, excerpt)
+    if field:
+        fields.append(field)
+
+
+def _extract_pairs(rows: Iterable[tuple], fields: list[Field], prefix: str) -> None:
+    for row_number, row in enumerate(rows, 1):
+        values = list(row)
+        if len(values) < 2:
+            continue
+        cells = ["" if value is None else str(value).strip() for value in values]
+        if len(cells) == 2:
+            _add(fields, cells[0], cells[1], f"{prefix}row {row_number}", f"{cells[0]}: {cells[1]}")
+            continue
+        # Support horizontal key/value pairs while preserving each cell's column.
+        for column in range(0, len(cells) - 1, 2):
+            if cells[column] and cells[column + 1]:
+                _add(
+                    fields, cells[column], cells[column + 1],
+                    f"{prefix}row {row_number}, columns {column + 1}-{column + 2}",
+                    f"{cells[column]}: {cells[column + 1]}",
+                )
+
+
+def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
+    ext = Path(filename).suffix.lower()
+    fields: list[Field] = []
+    warnings: list[str] = []
+    if ext == ".csv":
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise ValueError("CSV must be UTF-8 encoded.") from exc
+        _extract_pairs(csv.reader(io.StringIO(text)), fields, "")
+    elif ext in {".txt", ".md"}:
+        try:
+            lines = content.decode("utf-8-sig").splitlines()
+        except UnicodeDecodeError as exc:
+            raise ValueError("Text documents must be UTF-8 encoded.") from exc
+        for line_number, line in enumerate(lines, 1):
             if ":" in line:
-                a,b=line.split(":",1); add(a,b,f"line {i}",line)
-    elif ext==".xlsx":
-        try: import openpyxl
-        except ImportError as e: raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from e
-        wb=openpyxl.load_workbook(io.BytesIO(content),data_only=True,read_only=True)
-        for ws in wb.worksheets:
-            for i,row in enumerate(ws.iter_rows(values_only=True),1):
-                if len(row)>=2: add(row[0],row[1],f"{ws.title}!row {i}",f"{row[0]}: {row[1]}")
-    elif ext==".docx":
-        try: from docx import Document
-        except ImportError as e: raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from e
-        doc=Document(io.BytesIO(content))
-        for ti,table in enumerate(doc.tables,1):
-            for ri,row in enumerate(table.rows,1):
-                if len(row.cells)>=2: add(row.cells[0].text,row.cells[1].text,f"table {ti}, row {ri}",f"{row.cells[0].text}: {row.cells[1].text}")
-        for i,p in enumerate(doc.paragraphs,1):
-            if ":" in p.text:
-                a,b=p.text.split(":",1); add(a,b,f"paragraph {i}",p.text)
-    elif ext==".pdf":
-        try: from pypdf import PdfReader
-        except ImportError as e: raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from e
-        reader=PdfReader(io.BytesIO(content))
-        for pi,page in enumerate(reader.pages,1):
-            for li,line in enumerate((page.extract_text() or "").splitlines(),1):
+                label, value = line.split(":", 1)
+                _add(fields, label, value, f"line {line_number}", line.strip())
+    elif ext == ".xlsx":
+        try:
+            import openpyxl
+        except ImportError as exc:
+            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
+        workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+        try:
+            for sheet in workbook.worksheets:
+                rows = sheet.iter_rows(values_only=True)
+                _extract_pairs(rows, fields, f"{sheet.title}! ")
+        finally:
+            workbook.close()
+    elif ext == ".docx":
+        try:
+            from docx import Document
+        except ImportError as exc:
+            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
+        document = Document(io.BytesIO(content))
+        for table_number, table in enumerate(document.tables, 1):
+            for row_number, row in enumerate(table.rows, 1):
+                cells = [cell.text.strip() for cell in row.cells]
+                if len(cells) >= 2:
+                    _add(fields, cells[0], cells[1],
+                         f"table {table_number}, row {row_number}",
+                         f"{cells[0]}: {cells[1]}")
+        for paragraph_number, paragraph in enumerate(document.paragraphs, 1):
+            if ":" in paragraph.text:
+                label, value = paragraph.text.split(":", 1)
+                _add(fields, label, value, f"paragraph {paragraph_number}", paragraph.text)
+    elif ext == ".pdf":
+        try:
+            from pypdf import PdfReader
+        except ImportError as exc:
+            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
+        reader = PdfReader(io.BytesIO(content), strict=False)
+        for page_number, page in enumerate(reader.pages, 1):
+            for line_number, line in enumerate((page.extract_text() or "").splitlines(), 1):
                 if ":" in line:
-                    a,b=line.split(":",1); add(a,b,f"page {pi}, line {li}",line)
-        if not fields: warnings.append("No text fields found. Scanned PDFs need OCR; OCR is not included.")
-    else: raise ValueError("Supported formats: CSV, XLSX, DOCX, text PDF, TXT and MD.")
-    unique={}
-    for f in fields: unique.setdefault(f.name,f)
-    if not unique: warnings.append(f"No label/value fields extracted from {filename}. Use a two-column table or Label: value lines.")
-    return list(unique.values()),warnings
-def compare(reference_name,old,revised_name,new,tolerance=0):
-    if tolerance<0: raise ValueError("Tolerance must be non-negative")
-    a={x.name:x for x in old}; b={x.name:x for x in new}; out=[]
-    for key in sorted(a.keys()|b.keys()):
-        x=a.get(key); y=b.get(key)
-        if x is None: status="added"; why="Field appears only in revised document."
-        elif y is None: status="removed"; why="Field appears only in reference document."
-        elif x.value==y.value: status="unchanged"; why="Extracted values are identical."
-        elif x.number is not None and y.number is not None and x.unit and y.unit:
-            dx=FACTORS.get(x.unit.lower()); dy=FACTORS.get(y.unit.lower())
-            if dx and dy and dx[0]==dy[0]:
-                status="unchanged" if abs(x.number-y.number)<=tolerance else "changed"; why="Values compared in common base units."
-            elif x.unit.lower()!=y.unit.lower(): status="unit_mismatch"; why="Units could not be safely normalized; manual review required."
-            else: status="changed"; why="Numeric value differs."
-        else: status="changed"; why="Text or value differs; assess materiality."
-        out.append(Finding(key,status,x.value if x else None,y.value if y else None,x.source if x else None,y.source if y else None,why))
-    return {"reference_file":reference_name,"revised_file":revised_name,"findings":[asdict(x) for x in out],"warnings":[],"review_required":True,"method":"deterministic label/value comparison"}
-def report_csv(result):
-    s=io.StringIO(); w=csv.writer(s); w.writerow(["parameter","status","reference","revised","reference_source","revised_source","explanation"])
-    for f in result["findings"]: w.writerow([f[k] for k in ["parameter","status","reference","revised","reference_source","revised_source","explanation"]])
-    return s.getvalue()
+                    label, value = line.split(":", 1)
+                    _add(fields, label, value, f"page {page_number}, line {line_number}", line.strip())
+        if not fields:
+            warnings.append("No text fields found. This may be a scanned PDF; OCR is not included.")
+    else:
+        raise ValueError("Supported formats: CSV, XLSX, DOCX, text PDF, TXT and MD.")
+
+    counts: dict[str, int] = defaultdict(int)
+    for field in fields:
+        counts[field.name] += 1
+    duplicates = sorted(name for name, count in counts.items() if count > 1)
+    if duplicates:
+        warnings.append(
+            "Duplicate parameter labels were preserved and flagged as ambiguous: "
+            + ", ".join(duplicates)
+        )
+    if not fields:
+        warnings.append(
+            f"No label/value fields extracted from {filename}. "
+            "Use a two-column table or Label: value lines."
+        )
+    return fields, warnings
+
+
+def _display(fields: list[Field]) -> tuple[str | None, str | None]:
+    if not fields:
+        return None, None
+    return " | ".join(field.value for field in fields), " | ".join(
+        f"{field.source} [{field.excerpt}]" for field in fields
+    )
+
+
+def _compare_one(old: Field, new: Field, tolerance: float) -> tuple[str, str]:
+    if old.value == new.value:
+        return "unchanged", "Extracted values are identical."
+    if old.number is not None and new.number is not None:
+        if old.dimension == new.dimension and old.dimension not in {None, "unknown"}:
+            status = "unchanged" if abs(old.number - new.number) <= tolerance else "changed"
+            return status, "Values compared after conversion to a common base unit."
+        if old.dimension is None and new.dimension is None:
+            status = "unchanged" if abs(old.number - new.number) <= tolerance else "changed"
+            return status, "Unitless numeric values compared directly."
+        if old.dimension != new.dimension:
+            return "unit_mismatch", "Units are missing or belong to different dimensions; manual review required."
+        return "unit_mismatch", "At least one unit is not in the supported conversion table."
+    return "changed", "Text or value differs; assess materiality."
+
+
+def compare(reference_name: str, old: list[Field], revised_name: str,
+            new: list[Field], tolerance: float = 0.0) -> dict:
+    if tolerance < 0:
+        raise ValueError("Tolerance must be non-negative.")
+    if not isinstance(tolerance, (int, float)):
+        raise ValueError("Tolerance must be numeric.")
+    left: dict[str, list[Field]] = defaultdict(list)
+    right: dict[str, list[Field]] = defaultdict(list)
+    for field in old:
+        left[field.name].append(field)
+    for field in new:
+        right[field.name].append(field)
+    findings: list[Finding] = []
+    for key in sorted(left.keys() | right.keys()):
+        a, b = left.get(key, []), right.get(key, [])
+        av, asource = _display(a)
+        bv, bsource = _display(b)
+        if not a:
+            status, explanation = "added", "Parameter appears only in the revised document."
+        elif not b:
+            status, explanation = "removed", "Parameter appears only in the reference document."
+        elif len(a) > 1 or len(b) > 1:
+            status = "ambiguous"
+            explanation = "Multiple extracted entries share this parameter label. Resolve the source entries before comparison."
+        else:
+            status, explanation = _compare_one(a[0], b[0], float(tolerance))
+        findings.append(Finding(key, status, av, bv, asource, bsource, explanation))
+    return {
+        "reference_file": reference_name,
+        "revised_file": revised_name,
+        "findings": [asdict(item) for item in findings],
+        "warnings": [],
+        "review_required": True,
+        "method": "deterministic label/value extraction and comparison",
+        "tolerance": {"value": float(tolerance), "meaning": "absolute tolerance in normalized base units; applied only to compatible numeric dimensions"},
+    }
+
+
+def report_csv(result: dict) -> str:
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow([
+        "parameter", "status", "reference", "revised",
+        "reference_source", "revised_source", "explanation",
+    ])
+    for finding in result["findings"]:
+        writer.writerow([
+            finding[key] for key in (
+                "parameter", "status", "reference", "revised",
+                "reference_source", "revised_source", "explanation",
+            )
+        ])
+    return stream.getvalue()
