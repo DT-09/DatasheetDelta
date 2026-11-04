@@ -51,3 +51,19 @@ def test_review_events_are_append_only(tmp_path, monkeypatch):
     with store._database() as connection:
         with pytest.raises(Exception):
             connection.execute("UPDATE review_events SET note = 'tampered' WHERE id = ?", (event["id"],))
+
+
+def test_review_hash_chain_detects_database_tampering(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATASHEETDELTA_DB", str(tmp_path / "records.sqlite3"))
+    report = {
+        "reference_file": "before.csv",
+        "revised_file": "after.csv",
+        "findings": [{"parameter": "pressure", "status": "changed"}],
+    }
+    saved = store.save_investigation(report)
+    event = store.add_review(saved["investigation_id"], "pressure", "confirmed_change", "Reviewer")
+    with store._database() as connection:
+        connection.execute("DROP TRIGGER review_events_no_update")
+        connection.execute("UPDATE review_events SET note = 'tampered' WHERE id = ?", (event["id"],))
+    record = store.get_investigation(saved["investigation_id"])
+    assert record["review_chain_valid"] is False
