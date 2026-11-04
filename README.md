@@ -62,7 +62,8 @@ This writes JSON and CSV reports using the supplied output prefix.
 ## API
 
 - GET /api/health
-- POST /api/investigations (multipart fields: reference, revised, optional tolerance)
+- POST /api/investigations (multipart fields: reference, revised, optional dimension-specific tolerances)
+- GET /api/investigations (latest 50 saved records)
 - GET /api/investigations/{id}
 - POST /api/investigations/{id}/reviews
 - DELETE /api/investigations/{id}
