@@ -6,6 +6,7 @@ import re
 import zipfile
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
 
@@ -13,7 +14,7 @@ from typing import Iterable
 class Field:
     name: str
     value: str
-    number: float | None
+    number: Decimal | None
     unit: str | None
     dimension: str | None
     source: str
@@ -78,20 +79,20 @@ def _field(label: object, value: object, source: str, excerpt: str) -> Field | N
     match = NUMBER.match(raw_value)
     if not match:
         return Field(name, raw_value, None, None, None, source, excerpt[:500])
-    number = float(match.group(1).replace(",", ""))
+    number = Decimal(match.group(1).replace(",", ""))
     unit = match.group(2)
     normalized_unit = (unit or "").lower().replace("μ", "µ")
     spec = ("capacitance", 1.0) if normalized_unit == "f" and "capacitance" in name else UNITS.get(normalized_unit)
     if spec:
         dimension, factor = spec
         if dimension == "temperature_f":
-            number = (number - 32.0) * 5.0 / 9.0
+            number = (number - Decimal("32")) * Decimal("5") / Decimal("9")
             dimension = "temperature"
         elif dimension == "temperature_k":
-            number -= 273.15
+            number -= Decimal("273.15")
             dimension = "temperature"
         else:
-            number *= factor
+            number *= Decimal(str(factor))
         return Field(name, raw_value, number, unit, dimension, source, excerpt[:500])
     return Field(name, raw_value, number, unit, None, source, excerpt[:500])
 
@@ -257,8 +258,9 @@ def _group(fields: list[Field]) -> dict[str, list[Field]]:
     return result
 
 def compare(reference_name: str, old: list[Field], revised_name: str, new: list[Field], tolerance: float = 0.0) -> dict:
-    if tolerance < 0:
-        raise ValueError("Tolerance must be non-negative.")
+    threshold = Decimal(str(tolerance))
+    if not threshold.is_finite() or threshold < 0:
+        raise ValueError("Tolerance must be a finite, non-negative number.")
     a, b = _group(old), _group(new)
     findings: list[Finding] = []
     for key in sorted(a.keys() | b.keys()):
@@ -282,7 +284,7 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
         elif x.number is not None and y.number is not None:
             if x.dimension and y.dimension and x.dimension == y.dimension:
                 delta = abs(x.number - y.number)
-                status = "unchanged" if delta <= tolerance else "changed"
+                status = "unchanged" if delta <= threshold else "changed"
                 explanation = f"Compared after conversion to the common {x.dimension} base unit; absolute difference {delta:.6g}."
             elif x.dimension or y.dimension or x.unit or y.unit:
                 status, explanation = "unit_mismatch", "A unit is missing, unknown or dimensionally incompatible; manual review required."
