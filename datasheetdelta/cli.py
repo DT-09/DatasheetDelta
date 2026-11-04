@@ -39,8 +39,8 @@ def main() -> None:
             reference_path.name, reference_fields,
             revised_path.name, revised_fields, tolerances,
         )
-    except (OSError, ValueError) as exc:
-        parser.error(str(exc))
+    except Exception as exc:
+        parser.error(f"Could not process the supplied documents: {exc}")
 
     result["warnings"] = reference_warnings + revised_warnings
     output_prefix = Path(args.out)
