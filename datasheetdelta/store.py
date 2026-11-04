@@ -92,7 +92,7 @@ def save_investigation(report: dict[str, Any]) -> dict[str, Any]:
     created_at = _now()
     payload = json.dumps(report, ensure_ascii=False, separators=(",", ":"))
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
-    with _connect() as connection:
+    with _database() as connection:
         connection.execute(
             """INSERT INTO investigations
                (id, created_at, reference_name, revised_name, report_json, report_sha256)
@@ -131,7 +131,7 @@ def _read_events(connection: sqlite3.Connection, investigation_id: str) -> tuple
 
 def get_investigation(investigation_id: str) -> dict[str, Any] | None:
     initialize()
-    with _connect() as connection:
+    with _database() as connection:
         row = connection.execute(
             "SELECT * FROM investigations WHERE id = ?", (investigation_id,)
         ).fetchone()
@@ -171,7 +171,7 @@ def add_review(
         raise ValueError("Reviewer name or note exceeds the allowed length.")
 
     initialize()
-    with _connect() as connection:
+    with _database() as connection:
         connection.execute("BEGIN IMMEDIATE")
         investigation = connection.execute(
             "SELECT report_json FROM investigations WHERE id = ?", (investigation_id,)
@@ -212,7 +212,7 @@ def add_review(
 
 def delete_investigation(investigation_id: str) -> bool:
     initialize()
-    with _connect() as connection:
+    with _database() as connection:
         connection.execute("BEGIN IMMEDIATE")
         # The full record and its review history are removed together on explicit request.
         connection.execute("DROP TRIGGER IF EXISTS review_events_no_delete")
