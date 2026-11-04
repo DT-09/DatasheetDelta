@@ -105,14 +105,46 @@ def _add(fields: list[Field], label: object, value: object, source: str, excerpt
 
 
 def _extract_pairs(rows: Iterable[tuple], fields: list[Field], prefix: str) -> None:
+    header: tuple[int, int, int | None] | None = None
     for row_number, row in enumerate(rows, 1):
         values = list(row)
         if len(values) < 2:
             continue
         cells = ["" if value is None else str(value).strip() for value in values]
+
+        labels = [i for i, cell in enumerate(cells) if cell.strip().lower() in HEADER_LABELS]
+        value_columns = [i for i, cell in enumerate(cells) if cell.strip().lower() in HEADER_VALUES]
+        unit_columns = [i for i, cell in enumerate(cells) if cell.strip().lower() in {"unit", "units"}]
+        if labels and value_columns:
+            header = (labels[0], value_columns[0], unit_columns[0] if unit_columns else None)
+            continue
+
+        if header:
+            label_column, value_column, unit_column = header
+            if max(label_column, value_column, unit_column or 0) >= len(cells):
+                continue
+            label = cells[label_column]
+            value = cells[value_column]
+            if unit_column is not None and cells[unit_column]:
+                unit = cells[unit_column]
+                if not value.lower().endswith(unit.lower()):
+                    value = f"{value} {unit}".strip()
+            _add(
+                fields, label, value, f"{prefix}row {row_number}",
+                f"{label}: {value}",
+            )
+            continue
+
         if len(cells) == 2:
             _add(fields, cells[0], cells[1], f"{prefix}row {row_number}", f"{cells[0]}: {cells[1]}")
             continue
+
+        # Without headers, recognize a third cell as a unit only when it is known.
+        if len(cells) == 3 and cells[2].lower() in UNITS:
+            value = cells[1] if cells[1].lower().endswith(cells[2].lower()) else f"{cells[1]} {cells[2]}".strip()
+            _add(fields, cells[0], value, f"{prefix}row {row_number}", f"{cells[0]}: {value}")
+            continue
+
         # Support horizontal key/value pairs while preserving each cell's column.
         for column in range(0, len(cells) - 1, 2):
             if cells[column] and cells[column + 1]:
@@ -161,12 +193,11 @@ def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
             raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
         document = Document(io.BytesIO(content))
         for table_number, table in enumerate(document.tables, 1):
-            for row_number, row in enumerate(table.rows, 1):
-                cells = [cell.text.strip() for cell in row.cells]
-                if len(cells) >= 2:
-                    _add(fields, cells[0], cells[1],
-                         f"table {table_number}, row {row_number}",
-                         f"{cells[0]}: {cells[1]}")
+            _extract_pairs(
+                ([cell.text for cell in row.cells] for row in table.rows),
+                fields,
+                f"table {table_number}, ",
+            )
         for paragraph_number, paragraph in enumerate(document.paragraphs, 1):
             if ":" in paragraph.text:
                 label, value = paragraph.text.split(":", 1)
