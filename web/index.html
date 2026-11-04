@@ -1,92 +1,181 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101719">
-  <meta name="description" content="Compare engineering datasheet revisions. Trace every extracted change to its source and hand a structured register to engineering review.">
-  <title>DatasheetDelta — Engineering revision intelligence</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eee9dd">
+  <meta name="description" content="Compare engineering datasheet revisions. Trace extracted changes to their source and create a review-ready change register.">
+  <title>DatasheetDelta — Revision field manual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="grain" aria-hidden="true"></div>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="DatasheetDelta home"><span class="brand-mark">D<span>Δ</span></span><span class="brand-name">DATASHEET<span>DELTA</span></span></a>
-    <nav class="nav-links" aria-label="Main navigation"><a href="#workflow">Workflow</a><a href="#capabilities">Capabilities</a><a href="#limits">Scope</a></nav>
-    <a class="top-cta" href="#workspace">Open workspace <span>↗</span></a>
+  <div class="paper-grain" aria-hidden="true"></div>
+  <header class="masthead">
+    <a class="wordmark" href="/" aria-label="DatasheetDelta home">
+      <span class="mark"><span>D</span><i>Δ</i></span>
+      <span class="wordmark-text">DATASHEET<span>DELTA</span><small>ENGINEERING CHANGE INTELLIGENCE</small></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#method">Method</a><a href="#workspace">Workspace</a><a href="#boundaries">Boundaries</a>
+    </nav>
+    <a class="masthead-cta" href="#workspace">Open the bench <span>↗</span></a>
   </header>
+
   <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="live-dot"></span> ENGINEERING REVISION INTELLIGENCE <span class="eyebrow-line"></span> 01 / 04</div>
-        <h1>Every revision<br>leaves a <em>trace.</em></h1>
-        <p class="hero-lede">Turn two technical documents into one evidence-linked change register. Find what moved, see where it came from, and give engineering teams a clearer review starting point.</p>
-        <div class="hero-actions"><a class="button button-primary" href="#workspace">Start an investigation <span>↗</span></a><button class="button button-quiet" id="load-sample" type="button"><span class="play-icon">▷</span> Explore sample report</button></div>
-        <div class="hero-footnote"><span class="footnote-mark">i</span> Deterministic extraction and comparison. Human engineering approval remains essential.</div>
-      </div>
-      <div class="hero-visual" aria-label="Illustration of two document revisions feeding an evidence-linked change register">
-        <div class="visual-top"><span>REVISION ANALYSIS / LIVE VIEW</span><span class="visual-state"><i></i> TRACE MODEL</span></div>
-        <div class="document doc-a">
-          <div class="doc-head"><span>SPECIFICATION</span><b>REV  A</b></div><div class="doc-rule"></div>
-          <div class="doc-label">OPERATING PRESSURE</div><div class="doc-value">10.0 <small>bar</small></div>
-          <div class="doc-label">RATED VOLTAGE</div><div class="doc-value">24 <small>V DC</small></div>
-          <div class="doc-label">ENCLOSURE</div><div class="doc-value">IP 65</div>
-          <div class="doc-footer"><span>SUPPLIER / DATA SHEET</span><span>01</span></div>
+    <section class="cover">
+      <div class="cover-copy">
+        <div class="folio"><span>TECHNICAL NOTE 001</span><span>REVISION CONTROL / 2026</span></div>
+        <p class="overline"><span class="overline-square"></span> A DOCUMENT-TO-EVIDENCE WORKFLOW</p>
+        <h1>Find the change.<br><em>Keep the evidence.</em></h1>
+        <p class="cover-intro">DatasheetDelta compares two technical document revisions and turns supported parameter differences into a traceable engineering change register.</p>
+        <div class="cover-actions">
+          <a class="action-primary" href="#workspace">Compare two revisions <span>↘</span></a>
+          <button class="action-secondary" id="load-sample" type="button"><span class="sample-glyph">▤</span> Inspect the sample register</button>
         </div>
-        <div class="document doc-b">
-          <div class="doc-head"><span>SPECIFICATION</span><b>REV  B</b></div><div class="doc-rule"></div>
-          <div class="doc-label">OPERATING PRESSURE</div><div class="doc-value changed">12.0 <small>bar</small><i>Δ</i></div>
-          <div class="doc-label">RATED VOLTAGE</div><div class="doc-value">24 <small>V DC</small></div>
-          <div class="doc-label">ENCLOSURE</div><div class="doc-value changed">IP 67<i>Δ</i></div>
-          <div class="doc-footer"><span>SUPPLIER / DATA SHEET</span><span>02</span></div>
-        </div>
-        <svg class="trace-lines" viewBox="0 0 600 420" fill="none" aria-hidden="true"><path d="M248 132 C310 132 300 184 354 184" stroke="#e6a65c" stroke-width="1.5" stroke-dasharray="4 5"/><path d="M390 184 L405 184" stroke="#e6a65c" stroke-width="1.5"/><path d="M248 280 C310 280 300 235 354 235" stroke="#e6a65c" stroke-width="1.5" stroke-dasharray="4 5"/><circle cx="248" cy="132" r="3" fill="#e6a65c"/><circle cx="248" cy="280" r="3" fill="#e6a65c"/><circle cx="354" cy="184" r="3" fill="#e6a65c"/><circle cx="354" cy="235" r="3" fill="#e6a65c"/></svg>
-        <div class="delta-card"><div class="delta-head"><span>CHANGE REGISTER</span><span class="delta-count">02</span></div><div class="delta-row"><i class="delta-bar"></i><div><b>Operating pressure</b><small>10.0 → 12.0 bar</small></div><span class="delta-tag">CHANGED</span></div><div class="delta-row"><i class="delta-bar"></i><div><b>Enclosure rating</b><small>IP 65 → IP 67</small></div><span class="delta-tag">CHANGED</span></div><div class="delta-source">SOURCE LINKS <span>REV A · REV B</span></div></div>
-        <div class="visual-caption">ILLUSTRATIVE DATA · NOT A CUSTOMER RECORD</div>
+        <div class="cover-note"><span class="note-symbol">!</span><span>Decision support, not engineering approval. Every finding requires source verification.</span></div>
       </div>
-      <div class="hero-index"><span>DD / 001</span><span>COMPARE · TRACE · REVIEW</span><span>SCROLL TO EXPLORE ↓</span></div>
+
+      <div class="drawing-board" aria-label="Technical drawing showing two specification sheets and extracted changes">
+        <div class="board-meta"><span>FIG. 01 / REVISION OVERLAY</span><span class="board-coordinate">X 04.21 / Y 09.08</span></div>
+        <svg class="blueprint" viewBox="0 0 660 510" role="img" aria-label="Schematic of two specification revisions connected to a change register">
+          <defs>
+            <pattern id="microgrid" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#17344a" stroke-opacity=".10" stroke-width=".6"/></pattern>
+            <pattern id="majorgrid" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="url(#microgrid)"/><path d="M60 0H0V60" fill="none" stroke="#17344a" stroke-opacity=".12" stroke-width="1"/></pattern>
+          </defs>
+          <rect width="660" height="510" fill="url(#majorgrid)"/>
+          <path d="M24 46H636M24 464H636M42 24V486M618 24V486" stroke="#17344a" stroke-opacity=".25" stroke-width="1"/>
+          <g fill="none" stroke="#17344a" stroke-width="1">
+            <path d="M62 74H232V358H62Z" fill="#f8f5ec"/>
+            <path d="M258 96H428V380H258Z" fill="#fffdf7"/>
+            <path d="M232 122C286 122 276 156 322 156M232 278C286 278 276 232 322 232" stroke="#e36c42" stroke-width="2" stroke-dasharray="5 5"/>
+            <path d="M428 156H473V188H492M428 232H473V254H492" stroke="#e36c42" stroke-width="2"/>
+            <path d="M492 170H620V330H492Z" fill="#17344a"/>
+            <path d="M82 105H212M82 119H190M82 150H212M82 164H212M82 195H212M82 209H212M82 240H212M82 254H212M82 285H212M82 299H212" stroke-opacity=".25"/>
+            <path d="M278 127H408M278 141H386M278 172H408M278 186H408M278 217H408M278 231H408M278 262H408M278 276H408M278 307H408M278 321H408" stroke-opacity=".25"/>
+            <path d="M82 132H152M278 154H354" stroke="#e36c42" stroke-width="3"/>
+            <path d="M82 222H140M278 244H350" stroke="#e36c42" stroke-width="3"/>
+          </g>
+          <g fill="#17344a" font-family="DM Mono,monospace">
+            <text x="82" y="91" font-size="9" letter-spacing="1">SPECIFICATION / A</text>
+            <text x="278" y="113" font-size="9" letter-spacing="1">SPECIFICATION / B</text>
+            <text x="82" y="144" font-size="8">MAX PRESSURE</text><text x="82" y="184" font-size="8">RATED VOLTAGE</text><text x="82" y="234" font-size="8">ENCLOSURE</text>
+            <text x="278" y="166" font-size="8">MAX PRESSURE</text><text x="278" y="206" font-size="8">RATED VOLTAGE</text><text x="278" y="256" font-size="8">ENCLOSURE</text>
+            <text x="82" y="160" font-size="15" font-weight="bold">10 bar</text><text x="278" y="182" font-size="15" font-weight="bold" fill="#c65331">12 bar</text>
+            <text x="82" y="200" font-size="15" font-weight="bold">24 V DC</text><text x="278" y="222" font-size="15" font-weight="bold">24 V DC</text>
+            <text x="82" y="250" font-size="15" font-weight="bold">IP 65</text><text x="278" y="272" font-size="15" font-weight="bold" fill="#c65331">IP 67</text>
+            <text x="510" y="194" font-size="9" fill="#f8f5ec" letter-spacing="1">CHANGE REGISTER</text>
+            <text x="510" y="224" font-size="10" fill="#f8f5ec">Pressure</text><text x="510" y="240" font-size="9" fill="#e9a16e">10 → 12 bar</text>
+            <text x="510" y="276" font-size="10" fill="#f8f5ec">Enclosure</text><text x="510" y="292" font-size="9" fill="#e9a16e">IP 65 → IP 67</text>
+            <text x="510" y="316" font-size="8" fill="#b6c6c9">SOURCE-TRACEABLE</text>
+          </g>
+          <g fill="#e36c42"><circle cx="232" cy="122" r="4"/><circle cx="232" cy="278" r="4"/><circle cx="322" cy="156" r="4"/><circle cx="322" cy="232" r="4"/><circle cx="473" cy="188" r="3"/><circle cx="473" cy="254" r="3"/></g>
+          <g stroke="#17344a" stroke-opacity=".5" fill="none"><path d="M62 386H428M62 392V380M428 392V380"/><path d="M448 74V380M442 74H454M442 380H454"/></g>
+          <g fill="#17344a" font-family="DM Mono,monospace" font-size="8"><text x="62" y="405">DOCUMENT PAIR / NOT TO SCALE</text><text x="448" y="66">REVISION AXIS</text><text x="510" y="355">FIG 01.1</text></g>
+          <g stroke="#e36c42" stroke-width="1.5" fill="none"><path d="M44 44h18M44 44v18M598 44h18M616 44v18M44 446v18h18M598 464h18v-18"/></g>
+        </svg>
+        <div class="board-caption"><span>ILLUSTRATIVE DATA</span><span>NOT A CUSTOMER RECORD</span></div>
+        <div class="board-stamp">DD / 01</div>
+      </div>
+      <div class="cover-index"><span>COMPARE <b>01</b></span><span>TRACE <b>02</b></span><span>REVIEW <b>03</b></span><span class="index-tail">A CHANGE IS A QUESTION, NOT A VERDICT.</span></div>
     </section>
 
-    <section class="manifesto">
-      <div class="section-kicker">THE PROBLEM / 001</div>
-      <h2>A new revision is<br>not a <em>change log.</em></h2>
-      <p>Engineering teams need more than a visual diff. They need to know which parameters appear to have changed, which source locations support the finding, and where extraction is uncertain.</p>
+    <section class="thesis-strip">
+      <div class="thesis-label">THE PRINCIPLE</div>
+      <p>A revision history tells you that a document changed. <strong>An evidence register shows what the system could extract, where it found it, and what still needs a human decision.</strong></p>
+      <div class="thesis-mark">Δ</div>
     </section>
 
     <section class="workspace-section" id="workspace">
-      <div class="workspace-heading"><div><div class="eyebrow">02 / INVESTIGATION WORKSPACE</div><h2>Compare revisions.</h2><p>Upload a reference and a revised document. DatasheetDelta extracts supported label/value fields and assembles a reviewable register.</p></div><div class="api-indicator" id="api-indicator"><i></i><span>Checking analysis service…</span></div></div>
-      <div class="workspace-shell">
-        <div class="workspace-rail"><span class="rail-number active">01</span><span class="rail-line"></span><span class="rail-number">02</span><span class="rail-line"></span><span class="rail-number">03</span><div class="rail-label">INPUT<br>→ REVIEW<br>→ EXPORT</div></div>
-        <div class="workspace-main">
-          <div class="step-title"><div><span class="step-kicker">STEP 01</span><h3>Choose source documents</h3></div><span class="secure-note"><span>◇</span> Processed by the analysis service</span></div>
-          <form id="form">
-            <div class="file-grid">
-              <label class="file-card" for="reference"><span class="file-index">A / BASELINE</span><span class="file-icon"><svg viewBox="0 0 40 44" fill="none"><path d="M7 2.5h17l9 9V41H7V2.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M24 2.5v9h9M13 20h14M13 26h14M13 32h9" stroke="currentColor" stroke-width="1.5"/></svg></span><b>Reference document</b><small>The earlier approved or received revision</small><span class="file-choice" id="reference-label">Choose a file <span>＋</span></span><input id="reference" name="reference" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"></label>
-              <div class="swap-mark" aria-hidden="true">↔</div>
-              <label class="file-card" for="revised"><span class="file-index">B / REVISION</span><span class="file-icon"><svg viewBox="0 0 40 44" fill="none"><path d="M7 2.5h17l9 9V41H7V2.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M24 2.5v9h9M13 20h14M13 26h14M13 32h9" stroke="currentColor" stroke-width="1.5"/><path d="m26 27 3 3 6-7" stroke="#e6a65c" stroke-width="1.5"/></svg></span><b>Revised document</b><small>The newer supplier or engineering revision</small><span class="file-choice" id="revised-label">Choose a file <span>＋</span></span><input id="revised" name="revised" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"></label>
-            </div>
-            <div class="form-bottom"><label class="tolerance-field">NUMERIC TOLERANCE <span class="tooltip" title="Absolute tolerance in canonical base units. Use zero for mixed-dimension comparisons.">i</span><input name="tolerance" type="number" min="0" step="any" value="0"><small>Absolute · canonical base units</small></label><div class="submit-group"><span>CSV · XLSX · DOCX · TEXT PDF · TXT · MD<br>15 MB maximum per document</span><button class="button button-primary" type="submit" id="run-button">Run investigation <span>↗</span></button></div></div>
-          </form>
-          <div class="progress-panel" id="progress" hidden><span class="spinner"></span><div><b>Reading revision evidence</b><small>Extracting supported fields and comparing values…</small></div></div>
-          <div class="error-panel" id="error" role="alert" hidden></div>
-          <section id="results" class="results" hidden aria-live="polite"></section>
-        </div>
+      <div class="section-heading">
+        <div><p class="overline">02 / THE WORKBENCH</p><h2>Run a comparison.</h2><p class="section-deck">Bring the earlier and later documents together. Review the extracted fields before carrying the register into your engineering process.</p></div>
+        <div class="service-status" id="api-indicator"><i></i><span>Checking analysis service…</span></div>
       </div>
-      <p class="workspace-disclaimer"><b>Review boundary</b> — Extracted fields may be incomplete. A detected difference is not automatically a defect, safety issue, compliance breach or cost impact. Verify source documents and obtain qualified engineering approval.</p>
+      <div class="workbench">
+        <div class="workbench-top"><span>INVESTIGATION CONSOLE <b>DD–WORKSPACE</b></span><span>INPUT / 01—02</span></div>
+        <div class="workbench-body">
+          <aside class="workbench-aside"><span class="aside-number">01</span><span class="aside-rule"></span><span class="aside-number">02</span><span class="aside-rule"></span><span class="aside-number">03</span><p>SELECT<br>COMPARE<br>INSPECT</p><div class="aside-vertical">ENGINEERING REVISION CONTROL</div></aside>
+          <div class="workbench-content">
+            <div class="workbench-title"><div><p class="micro-label">INPUT PAIR / REQUIRED</p><h3>Choose the source files</h3></div><span class="privacy-note">◇ Files processed in request memory</span></div>
+            <form id="form">
+              <div class="upload-pair">
+                <label class="upload-slot" for="reference">
+                  <span class="slot-top"><b>DOCUMENT A</b><i>BASELINE</i></span>
+                  <span class="slot-illustration"><svg viewBox="0 0 70 76" aria-hidden="true"><path d="M12 5h30l16 16v49H12z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M42 5v16h16M22 34h26M22 43h26M22 52h18" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M22 61h12" stroke="#e36c42" stroke-width="2"/></svg></span>
+                  <strong>Reference document</strong><small>The earlier specification or supplier revision</small>
+                  <span class="file-picker" id="reference-label">Select a file <b>＋</b></span>
+                  <input id="reference" name="reference" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md">
+                </label>
+                <div class="pair-connector"><span>VS</span><i></i><small>REVISION<br>PAIR</small></div>
+                <label class="upload-slot revised-slot" for="revised">
+                  <span class="slot-top"><b>DOCUMENT B</b><i>NEW REVISION</i></span>
+                  <span class="slot-illustration"><svg viewBox="0 0 70 76" aria-hidden="true"><path d="M12 5h30l16 16v49H12z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M42 5v16h16M22 34h26M22 43h26M22 52h18" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m40 58 5 5 10-12" fill="none" stroke="#e36c42" stroke-width="2"/></svg></span>
+                  <strong>Revised document</strong><small>The later supplier or engineering revision</small>
+                  <span class="file-picker" id="revised-label">Select a file <b>＋</b></span>
+                  <input id="revised" name="revised" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md">
+                </label>
+              </div>
+              <div class="run-controls">
+                <label class="tolerance-control"><span>NUMERIC TOLERANCE <b title="Absolute tolerance in canonical base units">i</b></span><input name="tolerance" type="number" min="0" step="any" value="0"><small>Absolute · canonical base units</small></label>
+                <div class="format-note"><b>ACCEPTED FORMATS</b><span>CSV · XLSX · DOCX · TEXT PDF · TXT · MD</span><small>15 MB maximum per document</small></div>
+                <button class="run-button" type="submit" id="run-button">Run investigation <span>↗</span></button>
+              </div>
+            </form>
+            <div class="progress-panel" id="progress" hidden><span class="spinner"></span><div><b>Reading revision evidence</b><small>Extracting supported fields and comparing values…</small></div></div>
+            <div class="error-panel" id="error" role="alert" hidden></div>
+            <section id="results" class="results" hidden aria-live="polite"></section>
+          </div>
+        </div>
+        <div class="workbench-bottom"><span>PROCESS / EXTRACT → NORMALIZE → CLASSIFY → HAND OFF</span><span>HUMAN REVIEW REQUIRED</span></div>
+      </div>
+      <p class="review-boundary"><b>Review boundary</b> A candidate discrepancy is not a confirmed defect, safety issue, compliance breach or financial impact. Verify the source documents and obtain qualified engineering approval.</p>
     </section>
 
-    <section class="workflow-section" id="workflow">
-      <div class="section-kicker">03 / THE METHOD</div><div class="workflow-heading"><h2>Evidence before<br><em>interpretation.</em></h2><p>Four deliberate steps. No black-box safety verdicts. No invented certainty.</p></div>
-      <div class="workflow-grid"><article><span>01</span><div class="workflow-symbol">⌕</div><h3>Extract</h3><p>Read supported label/value structures and retain the source filename and location.</p><small>DOCUMENT → FIELDS</small></article><article><span>02</span><div class="workflow-symbol">⇄</div><h3>Normalize</h3><p>Convert supported physical units to canonical units while keeping original values visible.</p><small>VALUES → COMPARABLE DATA</small></article><article><span>03</span><div class="workflow-symbol">⌁</div><h3>Classify</h3><p>Separate added, removed, changed, unchanged and unit-mismatch findings.</p><small>DATA → CHANGE REGISTER</small></article><article><span>04</span><div class="workflow-symbol">↗</div><h3>Hand off</h3><p>Export the evidence register for review by a qualified engineering owner.</p><small>FINDINGS → HUMAN REVIEW</small></article></div>
+    <section class="method-section" id="method">
+      <div class="method-heading"><div><p class="overline">03 / THE METHOD</p><h2>From document<br>to <em>decision input.</em></h2></div><p>One narrow workflow, with the evidence kept visible at every step.</p></div>
+      <div class="method-steps">
+        <article><div class="step-top"><span>01</span><span class="step-glyph">⌕</span></div><h3>Extract</h3><p>Read supported label/value structures from each document and retain available source locations.</p><small>DOCUMENT → FIELDS</small></article>
+        <article><div class="step-top"><span>02</span><span class="step-glyph">⇄</span></div><h3>Normalize</h3><p>Convert supported physical units to canonical units while preserving original values in the report.</p><small>VALUES → COMPARABLE DATA</small></article>
+        <article><div class="step-top"><span>03</span><span class="step-glyph">Δ</span></div><h3>Classify</h3><p>Separate changed, added, removed, unchanged and unit-mismatch findings.</p><small>DATA → REGISTER</small></article>
+        <article><div class="step-top"><span>04</span><span class="step-glyph">↗</span></div><h3>Hand off</h3><p>Search, filter and export the findings for review by an accountable engineering owner.</p><small>REGISTER → REVIEW</small></article>
+      </div>
     </section>
 
-    <section class="capabilities-section" id="capabilities"><div class="section-kicker">04 / PRODUCT CAPABILITIES</div><h2>Built for a specific<br>kind of <em>clarity.</em></h2><div class="capability-layout"><div class="capability-lead"><div class="capability-graphic"><div class="graphic-ring ring-one"></div><div class="graphic-ring ring-two"></div><div class="graphic-core">Δ</div><span class="graphic-node node-a">A</span><span class="graphic-node node-b">B</span><span class="graphic-node node-c">E</span><span class="graphic-node node-d">R</span></div><p>Each finding carries the before and after values, source locations and a plain-language comparison explanation.</p></div><div class="capability-list"><div><b>Source provenance</b><span>Rows, worksheets, tables, paragraphs, PDF pages and text lines where available.</span></div><div><b>Conservative unit handling</b><span>Known dimensions are normalized. Unknown or incompatible units are flagged.</span></div><div><b>Focused review controls</b><span>Search findings, filter by status, and scan the summary before exporting.</span></div><div><b>Portable outputs</b><span>Download a structured JSON report or a CSV change register.</span></div></div></div></section>
+    <section class="evidence-section">
+      <div class="evidence-visual">
+        <div class="evidence-head"><span>REGISTER EXCERPT / SYNTHETIC</span><span>FIG. 02</span></div>
+        <div class="excerpt-row excerpt-header"><span>PARAMETER</span><span>REV A</span><span>REV B</span><span>STATUS</span></div>
+        <div class="excerpt-row"><b>Maximum pressure</b><span>10 bar</span><span class="changed-value">12 bar</span><i>CHANGED</i></div>
+        <div class="excerpt-row"><b>Rated voltage</b><span>24 V DC</span><span>24 V DC</span><i class="same-value">SAME</i></div>
+        <div class="excerpt-row"><b>Enclosure</b><span>IP 65</span><span class="changed-value">IP 67</span><i>CHANGED</i></div>
+        <div class="excerpt-row"><b>Sensor output</b><span>—</span><span>4–20 mA</span><i class="added-value">ADDED</i></div>
+        <div class="evidence-foot"><span>REFERENCE SOURCE / ROW 04</span><span>REVISED SOURCE / ROW 04</span></div>
+      </div>
+      <div class="evidence-copy"><p class="overline">04 / WHAT A FINDING CARRIES</p><h2>Not just a redline.<br><em>A trail to inspect.</em></h2><p>Each register entry is designed to retain the before and after values, source references and comparison explanation. That gives a reviewer a starting point they can challenge—not a verdict they must trust.</p><ul><li>Original extracted values</li><li>Source row, sheet, page or paragraph where available</li><li>Unit and comparison explanation</li><li>Warnings and unresolved extraction limits</li><li>Portable JSON and CSV outputs</li></ul></div>
+    </section>
 
-    <section class="limits-section" id="limits"><div><div class="section-kicker">PRODUCT BOUNDARIES / READ FIRST</div><h2>Trust depends on<br>what we <em>don't claim.</em></h2></div><div class="limits-copy"><p>DatasheetDelta is an evidence-gathering assistant. It does not replace engineering judgment or certify a product.</p><ul><li>Scanned PDFs require OCR; OCR is not included.</li><li>Complex multi-column layouts, merged tables, graphics, images and footnotes may be missed.</li><li>Duplicate labels are surfaced as warnings; inspect every occurrence.</li><li>No automated materiality, safety, compliance or supplier-contract decision.</li><li>No sign-off, approval workflow, customer integration or persistent document archive.</li></ul></div></section>
+    <section class="boundaries-section" id="boundaries">
+      <div class="boundaries-title"><p class="overline">05 / SCOPE & LIMITATIONS</p><h2>Precision includes<br>knowing the <em>limits.</em></h2><p>DatasheetDelta is a document evidence tool. It is not a substitute for technical interpretation or formal change control.</p></div>
+      <div class="boundary-list">
+        <div><span>01</span><b>Scanned documents</b><p>Scanned PDFs need OCR. OCR is not included.</p></div>
+        <div><span>02</span><b>Complex layouts</b><p>Multi-column pages, merged tables, graphics, images and footnotes may be missed.</p></div>
+        <div><span>03</span><b>Repeated labels</b><p>Duplicate normalized labels generate warnings. Inspect every source occurrence.</p></div>
+        <div><span>04</span><b>Engineering judgment</b><p>No automated materiality, safety, compliance, contract or suitability decision.</p></div>
+        <div><span>05</span><b>Operational controls</b><p>No authentication, persistent audit log, sign-off or approval workflow.</p></div>
+      </div>
+    </section>
 
-    <section class="closing-cta"><div class="closing-orbit"><span>Δ</span></div><div><div class="section-kicker">START WITH THE EVIDENCE</div><h2>Make the next revision<br><em>easier to review.</em></h2><a class="button button-primary" href="#workspace">Open investigation workspace <span>↗</span></a></div></section>
+    <section class="closing-band"><div class="closing-mark">Δ</div><div><p class="overline">DATASHEETDELTA / ENGINEERING REVISION INTELLIGENCE</p><h2>Make every change<br><em>traceable.</em></h2></div><a href="#workspace">Go to the workbench <span>↑</span></a></section>
   </main>
-  <footer class="footer"><div class="footer-top"><a class="brand" href="/"><span class="brand-mark">D<span>Δ</span></span><span class="brand-name">DATASHEET<span>DELTA</span></span></a><span class="footer-tagline">SPECIFICATION CHANGES, WITH PROVENANCE.</span><a href="#workspace" class="footer-link">Back to workspace ↑</a></div><div class="footer-bottom"><span>© 2026 DATASHEETDELTA</span><span>DETERMINISTIC COMPARISON · HUMAN REVIEW REQUIRED</span><span>BUILT FOR ENGINEERING TEAMS</span></div></footer>
+
+  <footer class="footer">
+    <a class="footer-brand" href="/"><span class="mark"><span>D</span><i>Δ</i></span><span>DATASHEETDELTA</span></a>
+    <p>Evidence first. Engineering judgment always.</p>
+    <div><a href="#method">Method</a><a href="#workspace">Workspace</a><a href="#boundaries">Limitations</a><a href="https://github.com/DT-09/DatasheetDelta" target="_blank" rel="noreferrer">Source ↗</a></div>
+    <small>© 2026 DATASHEETDELTA · BUILT FOR REVIEW, NOT AUTOMATED APPROVAL.</small>
+  </footer>
   <script src="/app.js"></script>
-</body></html>
+</body>
+</html>
