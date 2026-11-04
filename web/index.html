@@ -57,12 +57,24 @@
         <span class="micro">Uses the included example revisions. No customer data.</span>
       </div>
       <div class="controls">
-        <label>Absolute numeric tolerance
-          <input name="tolerance" type="number" min="0" step="any" value="0" inputmode="decimal">
-          <span class="micro">Applied only to compatible numeric dimensions after unit normalization.</span>
-        </label>
         <button class="primary" type="submit">Run comparison ↗</button>
       </div>
+      <details class="tolerance-settings">
+        <summary>Set dimension-specific tolerances (optional)</summary>
+        <p class="micro">Default is exact comparison. Tolerances apply only within the selected dimension; units shown are the normalization base units.</p>
+        <div class="tolerance-grid">
+          <label>Length · mm<input type="number" min="0" step="any" value="0" data-dimension-tolerance="length"></label>
+          <label>Pressure · Pa<input type="number" min="0" step="any" value="0" data-dimension-tolerance="pressure"></label>
+          <label>Voltage · V<input type="number" min="0" step="any" value="0" data-dimension-tolerance="voltage"></label>
+          <label>Current · A<input type="number" min="0" step="any" value="0" data-dimension-tolerance="current"></label>
+          <label>Power · W<input type="number" min="0" step="any" value="0" data-dimension-tolerance="power"></label>
+          <label>Frequency · Hz<input type="number" min="0" step="any" value="0" data-dimension-tolerance="frequency"></label>
+          <label>Mass · kg<input type="number" min="0" step="any" value="0" data-dimension-tolerance="mass"></label>
+          <label>Temperature · °C<input type="number" min="0" step="any" value="0" data-dimension-tolerance="temperature"></label>
+          <label>Percentage · points<input type="number" min="0" step="any" value="0" data-dimension-tolerance="percentage"></label>
+          <label>Unitless<input type="number" min="0" step="any" value="0" data-dimension-tolerance="unitless"></label>
+        </div>
+      </details>
       <div class="review-access">
         <label>Workspace access token
           <input id="access-token" type="password" autocomplete="off" placeholder="Required when review storage is enabled">
