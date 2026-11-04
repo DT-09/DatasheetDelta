@@ -27,6 +27,8 @@ class Finding:
     reference_source: str | None
     revised_source: str | None
     explanation: str
+    reference_excerpt: str | None = None
+    revised_excerpt: str | None = None
 
 ALIASES = {
     "max pressure": "maximum_pressure", "maximum pressure": "maximum_pressure",
@@ -212,7 +214,9 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
                 " | ".join(x.value for x in right) or None,
                 " | ".join(x.source for x in left) or None,
                 " | ".join(x.source for x in right) or None,
-                "Duplicate parameter labels prevent a safe one-to-one comparison. Review every source occurrence."))
+                "Duplicate parameter labels prevent a safe one-to-one comparison. Review every source occurrence.",
+                " | ".join(x.excerpt for x in left) or None,
+                " | ".join(x.excerpt for x in right) or None))
             continue
         x, y = (left[0] if left else None), (right[0] if right else None)
         if x is None:
@@ -233,7 +237,8 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
         else:
             status, explanation = "changed", "Text or value differs; assess engineering materiality."
         findings.append(Finding(key, status, x.value if x else None, y.value if y else None,
-            x.source if x else None, y.source if y else None, explanation))
+            x.source if x else None, y.source if y else None, explanation,
+            x.excerpt if x else None, y.excerpt if y else None))
     return {
         "schema_version": "1.0",
         "reference_file": reference_name,
@@ -252,7 +257,8 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
 def report_csv(result: dict) -> str:
     stream = io.StringIO(newline="")
     writer = csv.writer(stream)
-    writer.writerow(["parameter", "status", "reference", "revised", "reference_source", "revised_source", "explanation"])
+    columns = ("parameter", "status", "reference", "revised", "reference_source", "revised_source", "reference_excerpt", "revised_excerpt", "explanation")
+    writer.writerow(columns)
     for finding in result["findings"]:
-        writer.writerow([finding[key] for key in ("parameter", "status", "reference", "revised", "reference_source", "revised_source", "explanation")])
+        writer.writerow([finding.get(key) for key in columns])
     return stream.getvalue()
