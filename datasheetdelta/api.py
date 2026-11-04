@@ -14,7 +14,7 @@ from .reports import report_pdf
 MAX_FILE_BYTES = 15 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".docx", ".pdf", ".txt", ".md"}
 BASE_DIR = Path(__file__).resolve().parent.parent
-WEB_DIR = BASE_DIR / "web"
+WEB_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(
     title="DatasheetDelta",
