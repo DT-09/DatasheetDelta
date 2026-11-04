@@ -25,3 +25,6 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["datasheetdelta*"]
+
+[tool.setuptools.package-data]
+datasheetdelta = ["static/*"]
