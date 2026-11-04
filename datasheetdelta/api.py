@@ -50,7 +50,7 @@ def check_access(authorization: str | None, *, review: bool = False) -> bool:
         if (
             not separator
             or scheme.lower() != "bearer"
-            or not hmac.compare_digest(supplied, expected)
+            or not hmac.compare_digest(supplied.encode('utf-8'), expected.encode('utf-8'))
         ):
             raise HTTPException(status_code=401, detail="A valid bearer access token is required.")
         return True
