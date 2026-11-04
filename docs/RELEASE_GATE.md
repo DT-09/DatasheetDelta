@@ -12,24 +12,25 @@ No public release, release tag, launch announcement or production-readiness clai
 - [ ] Empty, malformed, encrypted, corrupt and unsupported documents fail safely with actionable errors.
 
 ## Review and traceability
-- [ ] Reviewer decisions and annotations are implemented.
-- [ ] Review history is append-only or otherwise tamper-evident within the stated threat model.
-- [ ] Approval identity, timestamp and decision scope are recorded.
-- [ ] Exported reports distinguish machine findings from human decisions.
-- [ ] No report implies engineering approval unless an authorized reviewer explicitly records it.
+- [x] Reviewer decisions and notes are implemented for a trusted single-operator deployment.
+- [x] Review events are append-only through the application and linked by a SHA-256 hash chain.
+- [x] Reports export machine findings separately from human review events.
+- [ ] Reviewer identity is authenticated per person; self-entered reviewer names are not sufficient for multi-user approval.
+- [ ] Retention, deletion, backup and restore behavior is validated under operational conditions.
+- [ ] Review-history integrity is tested against corruption and documented database-administrator limitations.
 
 ## Security and privacy
-- [ ] Upload limits, file validation, parser isolation and error handling are tested.
+- [x] Upload extension allowlisting and per-file size limits are implemented.
+- [ ] Parser isolation, archive expansion limits and malicious-document tests are complete.
 - [ ] No path traversal, unsafe archive expansion, formula injection or HTML injection is possible through supported flows.
-- [ ] Retention, deletion, logging, backups and deployment responsibilities are documented.
-- [ ] Authentication and authorization are implemented if multi-user or network-accessible use is supported.
+- [ ] Rate limiting, encrypted storage, token rotation and secret-management procedures are documented and tested.
 - [ ] Dependency and container vulnerability checks are clean or formally dispositioned.
 
 ## Quality and usability
 - [ ] Automated tests cover supported formats and realistic document variations.
-- [ ] API integration tests and browser end-to-end tests pass.
+- [ ] API integration tests and browser end-to-end tests pass across supported browsers.
 - [ ] Keyboard navigation, responsive behavior and accessible status communication are verified.
-- [ ] CLI, API, UI and report outputs agree on findings.
+- [ ] CLI, API, UI and report outputs agree on findings and review decisions.
 - [ ] Clean install and container build pass from a fresh environment.
 
 ## Validation and release operations
