@@ -56,9 +56,9 @@ def test_horizontal_key_value_pairs_are_extracted():
     assert {item.name for item in fields} == {"pressure", "voltage"}
 
 
-def test_negative_tolerance_rejected():
+def test_negative_dimension_tolerance_rejected():
     with pytest.raises(ValueError):
-        compare("a", [], "b", [], -0.1)
+        compare("a", [], "b", [], {"length": -0.1})
 
 
 def test_report_csv_quotes_values_and_evidence():
@@ -82,9 +82,9 @@ def test_same_unknown_unit_is_compared_without_conversion():
     assert result["findings"][0]["status"] == "changed"
 
 
-def test_non_finite_tolerance_rejected():
+def test_non_finite_dimension_tolerance_rejected():
     with pytest.raises(ValueError):
-        compare("a", [], "b", [], float("nan"))
+        compare("a", [], "b", [], {"length": float("nan")})
 
 
 def test_csv_parameter_value_unit_columns_keep_the_unit():
@@ -112,3 +112,12 @@ def test_scientific_notation_and_micrometre_conversion():
     micrometres, _ = extract("c.csv", b"Parameter,Value\\nLength,1000 um\\n")
     millimetres, _ = extract("d.csv", b"Parameter,Value\\nLength,1 mm\\n")
     assert compare("c.csv", micrometres, "d.csv", millimetres)["findings"][0]["status"] == "unchanged"
+
+
+def test_tolerance_only_applies_to_its_own_dimension():
+    old, _ = extract("a.csv", b"Parameter,Value\\nLength,10 mm\\n")
+    new, _ = extract("b.csv", b"Parameter,Value\\nLength,10.1 mm\\n")
+    result = compare("a.csv", old, "b.csv", new, {"pressure": 1000})
+    assert result["findings"][0]["status"] == "changed"
+    result = compare("a.csv", old, "b.csv", new, {"length": 0.2})
+    assert result["findings"][0]["status"] == "unchanged"
