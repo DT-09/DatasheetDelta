@@ -19,7 +19,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install application and test dependencies
-        run: pip install -e ".[api,documents,test]"
+        run: pip install -e ".[api,documents,reports,test]"
       - name: Run regression suite
         run: pytest -q
       - name: Verify CLI entry point
