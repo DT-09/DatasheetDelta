@@ -1,9 +1,63 @@
-import argparse,json
-from pathlib import Path
-from .core import extract,compare,report_csv
+from __future__ import annotations
 
-def main():
- p=argparse.ArgumentParser(description="Compare engineering specification revisions"); p.add_argument("reference"); p.add_argument("revised"); p.add_argument("--out",default="datasheetdelta-report"); a=p.parse_args()
- x=Path(a.reference); y=Path(a.revised); old,w1=extract(x.name,x.read_bytes()); new,w2=extract(y.name,y.read_bytes()); result=compare(x.name,old,y.name,new); result["warnings"]=w1+w2
- base=Path(a.out); base.parent.mkdir(parents=True,exist_ok=True); base.with_suffix(".json").write_text(json.dumps(result,indent=2)); base.with_suffix(".csv").write_text(report_csv(result)); print(f"Compared {len(result['findings'])} fields; reports saved with prefix {base}.")
-if __name__=="__main__": main()
+import argparse
+import json
+from pathlib import Path
+
+from .core import compare, extract, report_csv
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Compare two engineering specification revisions."
+    )
+    parser.add_argument("reference", help="Path to the original/reference document")
+    parser.add_argument("revised", help="Path to the revised document")
+    parser.add_argument("--out", default="datasheetdelta-report", help="Output filename prefix")
+    parser.add_argument(
+        "--tolerances", default="{}",
+        help='JSON object of absolute tolerances by dimension, e.g. {"length": 0.01, "pressure": 100}',
+    )
+    args = parser.parse_args()
+
+    reference_path = Path(args.reference)
+    revised_path = Path(args.revised)
+    if not reference_path.is_file():
+        parser.error(f"Reference document does not exist: {reference_path}")
+    if not revised_path.is_file():
+        parser.error(f"Revised document does not exist: {revised_path}")
+
+    try:
+        tolerances = json.loads(args.tolerances)
+        reference_fields, reference_warnings = extract(
+            reference_path.name, reference_path.read_bytes()
+        )
+        revised_fields, revised_warnings = extract(
+            revised_path.name, revised_path.read_bytes()
+        )
+        result = compare(
+            reference_path.name, reference_fields,
+            revised_path.name, revised_fields, tolerances,
+        )
+    except Exception as exc:
+        parser.error(f"Could not process the supplied documents: {exc}")
+
+    result["warnings"] = reference_warnings + revised_warnings
+    output_prefix = Path(args.out)
+    output_prefix.parent.mkdir(parents=True, exist_ok=True)
+    output_prefix.with_suffix(".json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    output_prefix.with_suffix(".csv").write_text(
+        report_csv(result), encoding="utf-8-sig", newline=""
+    )
+    counts = {}
+    for finding in result["findings"]:
+        counts[finding["status"]] = counts.get(finding["status"], 0) + 1
+    print(f"Compared {len(result['findings'])} parameters.")
+    print("Statuses: " + ", ".join(f"{key}={value}" for key, value in sorted(counts.items())))
+    print(f"Reports saved with prefix: {output_prefix}")
+
+
+if __name__ == "__main__":
+    main()

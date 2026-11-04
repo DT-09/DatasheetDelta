@@ -1,1 +1,130 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Evidence-first engineering specification change investigations"><title>DatasheetDelta — Engineering Change Intelligence</title><link rel="stylesheet" href="/styles.css"></head><body><header><a class="brand" href="/">DATASHEET<span>DELTA</span></a><nav><a href="#method">Method</a><a href="#scope">Scope</a><a class="nav-cta" href="#workspace">Run an investigation</a></nav></header><main><section class="hero"><p class="eyebrow">ENGINEERING CHANGE INTELLIGENCE</p><h1>Know what changed.<br><i>See the evidence.</i></h1><p class="lede">Compare supplier datasheets and engineering specifications. Turn revisions into a traceable change register your team can review.</p><a class="primary" href="#workspace">Start an investigation ↗</a><p class="micro">Documents are processed by the connected API. No document storage is implemented.</p></section><section class="statement"><h2>A revised document<br>is not a change log.</h2><p>Critical values hide in tables, footnotes and revised paragraphs. DatasheetDelta extracts supported fields, compares revisions and records where each value came from.</p></section><section id="workspace" class="workspace"><div class="section-head"><div><p class="eyebrow">01 / INVESTIGATION WORKSPACE</p><h2>Compare two revisions</h2></div><span class="status">● Evidence-first workflow</span></div><form id="form"><div class="uploads"><label class="upload"><small>A / REFERENCE</small><b>Original specification</b><span>CSV, XLSX, DOCX, text PDF, TXT, MD · 15 MB max</span><input name="reference" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"><em>Choose reference document</em></label><label class="upload"><small>B / REVISED</small><b>Updated specification</b><span>Select the revision to compare</span><input name="revised" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"><em>Choose revised document</em></label></div><div class="controls"><label>Numeric tolerance <input name="tolerance" type="number" min="0" step="any" value="0"></label><button class="primary">Run comparison ↗</button></div></form><p id="progress" hidden>Extracting fields and comparing evidence…</p><p id="error" class="error" role="alert" hidden></p><section id="results" hidden></section></section><section id="method" class="method"><p class="eyebrow">02 / METHOD</p><h2>From source document<br>to defensible review.</h2><div class="steps"><article><small>01</small><h3>Extract</h3><p>Read supported label/value fields. Preserve source filename and row, sheet, paragraph, page or line location.</p></article><article><small>02</small><h3>Normalize</h3><p>Convert a conservative set of engineering units before numeric comparison. Keep original values visible.</p></article><article><small>03</small><h3>Investigate</h3><p>Classify added, removed, changed and unchanged fields. Flag ambiguous units for review.</p></article><article><small>04</small><h3>Approve</h3><p>Export a change register. A qualified engineer decides materiality, compliance and approval.</p></article></div></section><section id="scope" class="scope"><h2>Precision starts<br>with honest boundaries.</h2><ul><li>CSV and XLSX two-column label/value tables</li><li>DOCX tables and label/value paragraphs</li><li>Text-based PDF label/value lines</li><li>TXT and Markdown label/value lines</li><li>Scanned PDFs need OCR; OCR is not included</li><li>Complex layouts and footnotes may be missed</li><li>Engineering impact and compliance are not inferred</li><li>Extraction completeness must be reviewed</li></ul></section></main><footer><a class="brand" href="/">DATASHEET<span>DELTA</span></a><p>Specification changes, with provenance.</p><small>© 2026 DatasheetDelta · Human engineering approval remains mandatory.</small></footer><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Investigate engineering specification revisions with source-linked parameter comparisons.">
+  <meta name="theme-color" content="#f3f0e7">
+  <title>DatasheetDelta — Engineering Change Intelligence</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="/" aria-label="DatasheetDelta home">DATASHEET<span>DELTA</span></a>
+  <nav aria-label="Main navigation">
+    <a href="/guide.html">User guide</a>
+    <a href="/methodology.html">Methodology</a>
+    <a href="/security.html">Security</a>
+    <a class="nav-cta" href="#workspace">Open workspace</a>
+  </nav>
+</header>
+<main>
+  <section class="hero">
+    <p class="eyebrow">ENGINEERING CHANGE INTELLIGENCE</p>
+    <h1>Know what changed.<br><i>Trace it to source.</i></h1>
+    <p class="lede">Compare two supplier datasheet revisions. Inspect extracted parameter changes with document-level provenance, then export a review register.</p>
+    <a class="primary" href="#workspace">Start an investigation ↗</a>
+    <p class="micro">Current development build. Findings require source verification and qualified engineering review.</p>
+  </section>
+
+  <section class="statement">
+    <h2>A revision is not<br>a change log.</h2>
+    <p>Values move. Labels vary. Repeated entries can hide ambiguity. DatasheetDelta extracts supported parameter/value pairs, preserves their source locations and makes the comparison inspectable.</p>
+  </section>
+
+  <section id="workspace" class="workspace">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / INVESTIGATION WORKSPACE</p><h2>Compare two revisions</h2></div>
+      <span class="status">Source-linked comparison · Human review required</span>
+    </div>
+    <form id="form">
+      <div class="uploads">
+        <label class="upload">
+          <small>A / REFERENCE</small><b>Original specification</b>
+          <span>CSV, XLSX, DOCX, text PDF, TXT or MD · 15 MB maximum</span>
+          <input name="reference" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md">
+          <em>Choose reference document</em>
+        </label>
+        <label class="upload">
+          <small>B / REVISED</small><b>Updated specification</b>
+          <span>Select the revision to compare against the reference</span>
+          <input name="revised" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md">
+          <em>Choose revised document</em>
+        </label>
+      </div>
+      <div class="sample-row">
+        <button id="load-sample" type="button">Load synthetic sample</button>
+        <span class="micro">Uses the included example revisions. No customer data.</span>
+      </div>
+      <div class="controls">
+        <button class="primary" type="submit">Run comparison ↗</button>
+      </div>
+      <details class="tolerance-settings">
+        <summary>Set dimension-specific tolerances (optional)</summary>
+        <p class="micro">Default is exact comparison. Tolerances apply only within the selected dimension; units shown are the normalization base units.</p>
+        <div class="tolerance-grid">
+          <label>Length · mm<input type="number" min="0" step="any" value="0" data-dimension-tolerance="length"></label>
+          <label>Pressure · Pa<input type="number" min="0" step="any" value="0" data-dimension-tolerance="pressure"></label>
+          <label>Voltage · V<input type="number" min="0" step="any" value="0" data-dimension-tolerance="voltage"></label>
+          <label>Current · A<input type="number" min="0" step="any" value="0" data-dimension-tolerance="current"></label>
+          <label>Power · W<input type="number" min="0" step="any" value="0" data-dimension-tolerance="power"></label>
+          <label>Frequency · Hz<input type="number" min="0" step="any" value="0" data-dimension-tolerance="frequency"></label>
+          <label>Mass · kg<input type="number" min="0" step="any" value="0" data-dimension-tolerance="mass"></label>
+          <label>Temperature · °C<input type="number" min="0" step="any" value="0" data-dimension-tolerance="temperature"></label>
+          <label>Percentage · points<input type="number" min="0" step="any" value="0" data-dimension-tolerance="percentage"></label>
+          <label>Unitless<input type="number" min="0" step="any" value="0" data-dimension-tolerance="unitless"></label>
+        </div>
+      </details>
+      <div class="review-access">
+        <label>Workspace access token
+          <input id="access-token" type="password" autocomplete="off" placeholder="Required when review storage is enabled">
+          <span class="micro">Sent only to this server. Kept in this browser tab's session storage.</span>
+        </label>
+        <label>Reviewer name
+          <input id="reviewer-name" type="text" maxlength="120" placeholder="Name recorded with review decisions">
+        </label>
+      </div>
+      <div class="saved-investigations">
+        <button id="list-saved" type="button">Load saved investigations</button>
+        <div id="saved-list" class="saved-list" hidden></div>
+      </div>
+    </form>
+    <p id="progress" role="status" aria-live="polite" hidden>Extracting supported fields and comparing evidence…</p>
+    <p id="error" class="error" role="alert" hidden></p>
+    <section id="results" aria-live="polite" hidden></section>
+  </section>
+
+  <section id="method" class="method">
+    <p class="eyebrow">02 / METHOD</p>
+    <h2>From source document<br>to reviewable evidence.</h2>
+    <div class="steps">
+      <article><small>01</small><h3>Extract</h3><p>Read supported label/value pairs. Retain filename and row, sheet, table, paragraph, page or line location.</p></article>
+      <article><small>02</small><h3>Normalize</h3><p>Convert a limited set of compatible units while keeping original source values visible.</p></article>
+      <article><small>03</small><h3>Compare</h3><p>Classify added, removed, changed, unchanged, unit-mismatched and ambiguous parameters.</p></article>
+      <article><small>04</small><h3>Review</h3><p>Verify each result against the source documents. A qualified engineer determines materiality and approval.</p></article>
+    </div>
+  </section>
+
+  <section id="scope" class="scope">
+    <div><p class="eyebrow">03 / SCOPE AND LIMITS</p><h2>Precision starts<br>with honest boundaries.</h2></div>
+    <ul>
+      <li>CSV and XLSX label/value rows and horizontal key/value pairs</li>
+      <li>DOCX tables and label/value paragraphs</li>
+      <li>Text-based PDF label/value lines</li>
+      <li>TXT and Markdown label/value lines</li>
+      <li>Scanned PDFs are not OCR-processed</li>
+      <li>Complex layouts, footnotes and nested tables may be missed</li>
+      <li>Duplicate parameter labels are flagged as ambiguous</li>
+      <li>Engineering impact and compliance are not inferred</li>
+      <li>Extraction completeness must be checked by a human</li>
+    </ul>
+  </section>
+</main>
+<footer>
+  <a class="brand" href="/">DATASHEET<span>DELTA</span></a>
+  <p><a href="/guide.html">User guide</a> · <a href="/methodology.html">Methodology</a> · <a href="/security.html">Security</a></p>
+  <small>© 2026 DatasheetDelta · Development build · Human engineering approval remains mandatory.</small>
+</footer>
+<script src="/app.js" defer></script>
+</body>
+</html>
