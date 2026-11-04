@@ -98,3 +98,11 @@ def test_non_finite_tolerance_is_rejected():
         data={"tolerance": "nan"},
     )
     assert response.status_code == 422
+
+
+def test_packaged_workspace_assets_match_deployment_assets():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    for name in ("index.html", "styles.css", "app.js"):
+        assert (root / "web" / name).read_bytes() == (root / "datasheetdelta" / "static" / name).read_bytes()
