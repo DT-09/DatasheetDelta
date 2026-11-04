@@ -31,6 +31,11 @@ def test_full_browser_investigation_review_and_csv_export():
         page.get_by_text("confirmed change", exact=True).wait_for()
         assert page.get_by_text("CI Reviewer", exact=False).count() >= 1
 
+        page.locator("#list-saved").click()
+        page.locator("[data-open-investigation]").first.click()
+        page.get_by_text("confirmed change", exact=True).wait_for()
+        assert page.get_by_text("Review chain: verified", exact=True).count() == 1
+
         with page.expect_download() as download_info:
             page.locator("#csv").click()
         download = download_info.value
