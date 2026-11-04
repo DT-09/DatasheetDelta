@@ -61,7 +61,7 @@ Duplicate occurrences of a parameter are retained and marked `ambiguous`. A dupl
 
 ## Human review
 
-The browser interface lets a reviewer mark a finding as confirmed, requiring investigation, not applicable or not reviewed, and add a note. These decisions are held in browser memory and included in the exported review-package JSON. They are not stored on the server. A reviewer must preserve the exported package in the organization's approved document-control system.
+The browser interface lets a reviewer mark a finding as confirmed, requiring investigation, not applicable or not reviewed, add a note, and provide a self-reported reviewer name. The exported review-package JSON includes the decisions, notes, reviewer name and export timestamp. These decisions are held in browser memory until exported. They are not stored on the server. A reviewer must preserve the exported package in the organization's approved document-control system.
 
 ## Extraction boundaries
 
