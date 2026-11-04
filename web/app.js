@@ -104,6 +104,6 @@ function toCsv(report,events) {
   const columns=["parameter","status","reference","revised","reference_source","revised_source","explanation","review_decision","reviewer","review_note","review_timestamp"];
   const latest=new Map(); for(const event of events) latest.set(event.parameter,event);
   const rows=[columns,...(report.findings||[]).map(item=>{const review=latest.get(item.parameter)||{};return [item.parameter,item.status,item.reference,item.revised,item.reference_source,item.revised_source,item.explanation,review.decision||"",review.reviewer||"",review.note||"",review.created_at||""];})];
-  return rows.map(row=>row.map(value=>'"'+String(value??"").replace(/"/g,'""')+'"').join(",")).join("\\r\\n");
+  return rows.map(row=>row.map(value=>{const text=String(value??"");const safe=/^[\\s]*[=+\\-@]/.test(text)?"'"+text:text;return '"'+safe.replace(/"/g,'""')+'"';}).join(",")).join("\\r\\n");
 }
 function download(filename,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const anchor=document.createElement("a");anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
