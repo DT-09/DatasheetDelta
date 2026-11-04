@@ -26,7 +26,7 @@ app = FastAPI(
         "Deterministic engineering-document revision comparison. "
         "Findings require qualified human review and are not engineering approval."
     ),
-    docs_url="/api/docs",
+    docs_url=None,
     redoc_url=None,
 )
 
@@ -77,7 +77,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "product": "DatasheetDelta",
-        "mode": "development",
+        "mode": "protected" if os.getenv("DATASHEETDELTA_ACCESS_TOKEN") else "development",
         "access_token_required": bool(os.getenv("DATASHEETDELTA_ACCESS_TOKEN")),
     }
 
