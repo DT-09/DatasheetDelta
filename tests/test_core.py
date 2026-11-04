@@ -85,3 +85,13 @@ def test_same_unknown_unit_is_compared_without_conversion():
 def test_non_finite_tolerance_rejected():
     with pytest.raises(ValueError):
         compare("a", [], "b", [], float("nan"))
+
+
+def test_csv_parameter_value_unit_columns_keep_the_unit():
+    fields, _ = extract(
+        "spec.csv",
+        b"Parameter,Value,Unit\\nPressure,10,bar\\nLength,25,mm\\n",
+    )
+    values = {item.name: item.value for item in fields}
+    assert values == {"pressure": "10 bar", "length": "25 mm"}
+    assert fields[0].dimension == "pressure"
