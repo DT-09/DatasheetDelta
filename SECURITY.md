@@ -8,6 +8,8 @@ Include the affected version or commit, impact, reproduction conditions and any 
 
 ## Current security scope
 
-DatasheetDelta is in development and is not approved for confidential or regulated document processing. The current API applies extension allowlisting and per-file size limits, but this is not a substitute for a hardened parser sandbox, authentication, authorization, rate limiting, malware scanning or deployment-level controls.
+DatasheetDelta is in development and is not approved for confidential or regulated document processing. The API supports extension allowlisting, per-file size limits and an optional shared bearer token. Persisted reports contain extracted parameter values and source excerpts even though original documents are not retained.
 
-Do not expose an unreviewed development deployment to untrusted users.
+The current token model does not provide individual identities, roles, SSO or per-user authorization. SQLite hash chaining detects ordinary changes to review events but cannot prevent a database administrator from rewriting the database. Deleting an investigation removes its complete report and review history.
+
+This is not a substitute for a hardened parser sandbox, rate limiting, malware scanning, dependency monitoring, encrypted storage, backup controls or deployment-level access restrictions. Do not expose an unreviewed development deployment to untrusted users.
