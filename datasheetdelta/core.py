@@ -4,6 +4,7 @@ import csv
 import io
 import math
 import re
+import zipfile
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -155,6 +156,33 @@ def _extract_pairs(rows: Iterable[tuple], fields: list[Field], prefix: str) -> N
                 )
 
 
+
+MAX_ARCHIVE_ENTRIES = 5000
+MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
+MAX_ARCHIVE_COMPRESSION_RATIO = 1000
+
+
+def _validate_office_archive(content: bytes, required_member: str) -> None:
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            members = archive.infolist()
+            if len(members) > MAX_ARCHIVE_ENTRIES:
+                raise ValueError("Office document contains too many archive entries.")
+            total_size = sum(member.file_size for member in members)
+            if total_size > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+                raise ValueError("Office document expands beyond the 100 MB safety limit.")
+            for member in members:
+                if member.file_size and (
+                    member.compress_size == 0
+                    or member.file_size / member.compress_size > MAX_ARCHIVE_COMPRESSION_RATIO
+                ):
+                    raise ValueError("Office document has a suspicious compression ratio.")
+            if required_member not in archive.namelist():
+                raise ValueError("Office document is missing required package content.")
+    except zipfile.BadZipFile as exc:
+        raise ValueError("Office document is not a valid ZIP-based document.") from exc
+
+
 def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
     ext = Path(filename).suffix.lower()
     fields: list[Field] = []
@@ -175,6 +203,7 @@ def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
                 label, value = line.split(":", 1)
                 _add(fields, label, value, f"line {line_number}", line.strip())
     elif ext == ".xlsx":
+        _validate_office_archive(content, "xl/workbook.xml")
         try:
             import openpyxl
         except ImportError as exc:
@@ -187,6 +216,7 @@ def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
         finally:
             workbook.close()
     elif ext == ".docx":
+        _validate_office_archive(content, "word/document.xml")
         try:
             from docx import Document
         except ImportError as exc:
@@ -208,6 +238,8 @@ def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
         except ImportError as exc:
             raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
         reader = PdfReader(io.BytesIO(content), strict=False)
+        if len(reader.pages) > 500:
+            raise ValueError("PDF exceeds the 500-page processing limit.")
         for page_number, page in enumerate(reader.pages, 1):
             for line_number, line in enumerate((page.extract_text() or "").splitlines(), 1):
                 if ":" in line:
@@ -298,6 +330,13 @@ def compare(reference_name: str, old: list[Field], revised_name: str,
     }
 
 
+def _spreadsheet_safe(value: object) -> str:
+    text = "" if value is None else str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@", "\\t", "\\r")):
+        return "'" + text
+    return text
+
+
 def report_csv(result: dict) -> str:
     stream = io.StringIO()
     writer = csv.writer(stream)
@@ -307,7 +346,7 @@ def report_csv(result: dict) -> str:
     ])
     for finding in result["findings"]:
         writer.writerow([
-            finding[key] for key in (
+            _spreadsheet_safe(finding[key]) for key in (
                 "parameter", "status", "reference", "revised",
                 "reference_source", "revised_source", "explanation",
             )
