@@ -39,7 +39,7 @@ UNITS = {
     "%": ("percentage", 1.0),
 }
 NUMBER = re.compile(
-    r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
+    r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*"
     r"([A-Za-z°%µμ/²³._-]+)?\s*$"
 )
 HEADER_LABELS = {"parameter", "field", "property", "specification", "name", "item"}
