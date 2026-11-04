@@ -73,6 +73,12 @@ def test_pdf_export_endpoint_returns_pdf_document():
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.content.startswith(b"%PDF-")
+    from io import BytesIO
+    from pypdf import PdfReader
+    pdf = PdfReader(BytesIO(response.content))
+    extracted = "\\n".join(page.extract_text() or "" for page in pdf.pages)
+    assert "Engineering change report" in extracted
+    assert "Pressure" in extracted
 
 
 def test_upload_limit_is_enforced(monkeypatch):
