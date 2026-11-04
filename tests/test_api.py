@@ -102,3 +102,12 @@ def test_authenticated_review_lifecycle(tmp_path, monkeypatch):
     deleted = client.delete(f"/api/investigations/{investigation_id}", headers=headers)
     assert deleted.status_code == 200
     assert client.get(f"/api/investigations/{investigation_id}", headers=headers).status_code == 404
+
+
+def test_synthetic_sample_files_are_served():
+    reference = client.get("/examples/reference.csv")
+    revised = client.get("/examples/revised.csv")
+    assert reference.status_code == 200
+    assert revised.status_code == 200
+    assert "Parameter,Value" in reference.text
+    assert "Maximum pressure" in revised.text
