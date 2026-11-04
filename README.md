@@ -20,7 +20,7 @@ It is an evidence-gathering tool. It does **not** decide whether a change is saf
 | Format | Supported extraction |
 |---|---|
 | CSV | First two columns as label and value |
-| XLSX | First two populated columns per row, across worksheets |
+| XLSX | First two columns per row, across worksheets |
 | DOCX | Two-cell table rows and Label: value paragraphs |
 | Text PDF | Extractable Label: value lines |
 | TXT / Markdown | Label: value lines |
@@ -69,11 +69,11 @@ Maximum upload size: 15 MB per file. Files are read into request memory and are 
 ## Validation
 
 ~~~bash
-pip install -e ".[documents,test]"
+pip install -e ".[api,documents,test]"
 pytest
 ~~~
 
-Tests cover extraction provenance, equivalent-unit comparisons, numeric changes, incompatible dimensions, unknown units, duplicate labels, summary counts, tolerance validation, and text extraction.
+The test suite covers source provenance, equivalent-unit comparisons, numeric changes, incompatible dimensions, unknown units, duplicate labels, summary counts, tolerance validation, text extraction, API health, multipart investigations, upload rejection, and CSV export.
 
 ## Deployment
 
