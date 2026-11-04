@@ -19,7 +19,7 @@ def test_investigation_endpoint_returns_source_linked_findings():
     response = client.post(
         "/api/investigations",
         files={"reference": reference, "revised": revised},
-        data={"tolerance": "0"},
+        data={"tolerances": "{}"},
     )
     assert response.status_code == 200
     result = response.json()
