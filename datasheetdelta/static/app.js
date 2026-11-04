@@ -4,6 +4,7 @@ const error = document.querySelector("#error");
 const results = document.querySelector("#results");
 let currentReport = null;
 let review = {};
+let reviewerName = "";
 
 for (const input of form.querySelectorAll('input[type="file"]')) {
   input.addEventListener("change", () => {
@@ -26,6 +27,7 @@ form.addEventListener("submit", async event => {
     if (!response.ok) throw new Error(payload.detail || "Investigation failed.");
     currentReport = payload;
     review = {};
+    reviewerName = "";
     render(payload);
   } catch (exception) {
     error.textContent = exception.message + " Check the API service and optional document dependencies.";
@@ -48,6 +50,7 @@ function render(report) {
     <div class="metrics">${[["Compared",findings.length],["Changed",counts.changed||0],["Added",counts.added||0],["Removed",counts.removed||0],["Ambiguous",counts.ambiguous||0],["Unchanged",counts.unchanged||0]].map(([label,value])=>`<div class="metric"><b>${value}</b>${label}</div>`).join("")}</div>
     <div class="review-tools">
       <label>Filter <select id="status-filter"><option value="all">All findings</option><option value="changed">Changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="ambiguous">Ambiguous</option><option value="unit_mismatch">Unit mismatch</option><option value="unchanged">Unchanged</option></select></label>
+      <label>Reviewer (self-reported) <input id="reviewer-name" type="text" maxlength="120" placeholder="Reviewer name"></label>
       <label>Find parameter <input id="search-filter" type="search" placeholder="Search names or values"></label>
       <span class="micro">Review decisions stay in this browser session until exported.</span>
     </div>
@@ -57,16 +60,21 @@ function render(report) {
   results.hidden = false;
   document.querySelector("#status-filter").addEventListener("change", drawFindings);
   document.querySelector("#search-filter").addEventListener("input", drawFindings);
+  document.querySelector("#reviewer-name").addEventListener("input", event => { reviewerName = event.target.value.trim(); });
   document.querySelector("#export-pdf").onclick = exportPdf;
   document.querySelector("#export-json").onclick = () => download("datasheetdelta.json", JSON.stringify(report, null, 2), "application/json");
   document.querySelector("#export-csv").onclick = () => download("datasheetdelta.csv", toCsv(report), "text/csv;charset=utf-8");
   document.querySelector("#export-review").onclick = () => {
-    const packageData = {...report, human_review: findings.map(item => ({
-      parameter: item.parameter,
-      status: item.status,
-      decision: review[item.parameter]?.decision || "not_reviewed",
-      note: review[item.parameter]?.note || ""
-    }))};
+    const packageData = {...report, human_review: {
+      reviewer_name: reviewerName || null,
+      exported_at_utc: new Date().toISOString(),
+      findings: findings.map(item => ({
+        parameter: item.parameter,
+        status: item.status,
+        decision: review[item.parameter]?.decision || "not_reviewed",
+        note: review[item.parameter]?.note || ""
+      }))
+    }};
     download("datasheetdelta-reviewed-package.json", JSON.stringify(packageData, null, 2), "application/json");
   };
   drawFindings();
