@@ -5,6 +5,8 @@ const results = document.querySelector("#results");
 const tokenInput = document.querySelector("#access-token");
 const reviewerInput = document.querySelector("#reviewer-name");
 const sampleButton = document.querySelector("#load-sample");
+const savedListButton = document.querySelector("#list-saved");
+const savedList = document.querySelector("#saved-list");
 let activeReport = null;
 let activeEvents = [];
 
@@ -108,6 +110,61 @@ function toCsv(report,events) {
   return rows.map(row=>row.map(value=>{const text=String(value??"");const formulaPrefix=["=", "+", "-", "@"].includes(text.trimStart()[0]) || [9,13].includes(text.charCodeAt(0));const safe=formulaPrefix?"'"+text:text;return '"'+safe.replace(/"/g,'""')+'"';}).join(",")).join("\r\n");
 }
 function download(filename,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const anchor=document.createElement("a");anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+
+savedListButton.addEventListener("click", loadSavedInvestigations);
+
+async function loadSavedInvestigations() {
+  savedListButton.disabled = true;
+  error.hidden = true;
+  try {
+    const response = await fetch("/api/investigations", {headers:accessHeaders()});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Could not load saved investigations.");
+    const items = data.investigations || [];
+    savedList.innerHTML = items.length ? items.map(item => `
+      <div class="saved-item">
+        <div><b>${escapeHtml(item.reference_name)} → ${escapeHtml(item.revised_name)}</b>
+        <span class="micro">${escapeHtml(item.created_at)} · ${escapeHtml(item.id)}</span></div>
+        <button type="button" data-open-investigation="${escapeHtml(item.id)}">Open</button>
+      </div>`).join("") : '<p class="micro">No saved investigations yet.</p>';
+    savedList.hidden = false;
+    for (const button of savedList.querySelectorAll("[data-open-investigation]")) {
+      button.addEventListener("click", () => openInvestigation(button.dataset.openInvestigation));
+    }
+  } catch (exception) {
+    error.textContent = exception.message;
+    error.hidden = false;
+  } finally {
+    savedListButton.disabled = false;
+  }
+}
+
+async function openInvestigation(investigationId) {
+  error.hidden = true;
+  try {
+    const response = await fetch(
+      `/api/investigations/${encodeURIComponent(investigationId)}`,
+      {headers:accessHeaders()}
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Could not open investigation.");
+    activeReport = {
+      ...data.report,
+      investigation_id:data.investigation_id,
+      created_at:data.created_at,
+      report_sha256:data.report_sha256,
+      report_integrity_valid:data.report_integrity_valid,
+      review_chain_valid:data.review_chain_valid,
+      review_enabled:true
+    };
+    activeEvents = data.review_events || [];
+    render();
+  } catch (exception) {
+    error.textContent = exception.message;
+    error.hidden = false;
+  }
+}
 
 sampleButton.addEventListener("click", async () => {
   sampleButton.disabled = true;
