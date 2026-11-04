@@ -106,12 +106,19 @@ function drawFindings() {
   }));
 }
 
+function csvSafe(value) {
+  const text = String(value ?? "");
+  const probe = text.replace(/^[ \\t\\r]+/, "");
+  const negativeNumber = /^-(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?(?:\\s*[A-Za-z°%µμ/²³._-]+)?$/;
+  if (/^[=+@\\t\\r]/.test(probe) || (probe.startsWith("-") && !negativeNumber.test(probe))) return "'" + text;
+  return text;
+}
+
 function toCsv(report) {
   const columns = ["parameter","status","reference","revised","reference_source","revised_source","reference_excerpt","revised_excerpt","explanation"];
   const rows = [columns, ...report.findings.map(item => columns.map(column => item[column] ?? ""))];
-  return rows.map(row => row.map(value => '"' + String(value).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+  return rows.map(row => row.map(value => '"' + csvSafe(value).replace(/"/g,'""') + '"').join(",")).join("\\r\\n");
 }
-
 function download(filename, content, type) {
   const url = URL.createObjectURL(new Blob([content], {type}));
   const anchor = document.createElement("a");
