@@ -123,9 +123,6 @@ def _read_events(connection: sqlite3.Connection, investigation_id: str) -> tuple
         if event["previous_hash"] != previous or event["event_hash"] != expected:
             valid = False
         previous = event["event_hash"]
-    for event in events:
-        event.pop("previous_hash", None)
-        event.pop("event_hash", None)
     return events, valid
 
 
