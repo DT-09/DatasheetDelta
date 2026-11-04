@@ -24,9 +24,9 @@ class Finding:
 
 ALIASES={"max pressure":"maximum_pressure","maximum pressure":"maximum_pressure","operating pressure":"operating_pressure","rated voltage":"rated_voltage","max temperature":"maximum_temperature","maximum temperature":"maximum_temperature","operating temperature":"operating_temperature","ip rating":"ingress_protection"}
 FACTORS={"mm":("length",1),"cm":("length",10),"m":("length",1000),"in":("length",25.4),"inch":("length",25.4),"pa":("pressure",1),"kpa":("pressure",1000),"mpa":("pressure",1000000),"bar":("pressure",100000),"psi":("pressure",6894.757293),"v":("voltage",1),"mv":("voltage",.001),"kv":("voltage",1000),"a":("current",1),"ma":("current",.001),"w":("power",1),"kw":("power",1000),"hz":("frequency",1),"khz":("frequency",1000),"mhz":("frequency",1000000),"kg":("mass",1),"g":("mass",.001),"°c":("temperature",1),"c":("temperature",1),"%":("percentage",1)}
-NUM=re.compile(r"^\\s*([-+]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)?(?:\\.\\d+)?)\\s*([A-Za-z°%µμ/²³._-]+)?\\s*$")
+NUM=re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?)\s*([A-Za-z°%µμ/²³._-]+)?\s*$")
 def _field(label,value,source,excerpt):
-    label=re.sub(r"\\s+"," ",label.strip().lower()).rstrip(":")
+    label=re.sub(r"\s+"," ",label.strip().lower()).rstrip(":")
     if not label or not value.strip(): return None
     name=ALIASES.get(label,re.sub(r"[^a-z0-9]+","_",label).strip("_"))
     value=value.strip(); m=NUM.match(value)
