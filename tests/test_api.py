@@ -55,3 +55,48 @@ def test_invalid_report_format_is_rejected():
         files={"reference": reference, "revised": revised},
     )
     assert response.status_code == 404
+
+
+def test_authenticated_review_lifecycle(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATASHEETDELTA_ACCESS_TOKEN", "test-secret-token")
+    monkeypatch.setenv("DATASHEETDELTA_DB", str(tmp_path / "review.sqlite3"))
+    headers = {"Authorization": "Bearer test-secret-token"}
+    reference = ("reference.csv", b"Parameter,Value\\nPressure,10 bar\\n", "text/csv")
+    revised = ("revised.csv", b"Parameter,Value\\nPressure,12 bar\\n", "text/csv")
+
+    denied = client.post(
+        "/api/investigations",
+        files={"reference": reference, "revised": revised},
+    )
+    assert denied.status_code == 401
+
+    created = client.post(
+        "/api/investigations",
+        headers=headers,
+        files={"reference": reference, "revised": revised},
+    )
+    assert created.status_code == 200
+    investigation_id = created.json()["investigation_id"]
+    assert created.json()["review_enabled"] is True
+
+    review = client.post(
+        f"/api/investigations/{investigation_id}/reviews",
+        headers=headers,
+        json={
+            "parameter": "pressure",
+            "decision": "confirmed_change",
+            "reviewer": "Test Reviewer",
+            "note": "Checked against source document.",
+        },
+    )
+    assert review.status_code == 200
+    assert review.json()["review_chain_valid"] is True
+
+    record = client.get(f"/api/investigations/{investigation_id}", headers=headers)
+    assert record.status_code == 200
+    assert record.json()["report_integrity_valid"] is True
+    assert len(record.json()["review_events"]) == 1
+
+    deleted = client.delete(f"/api/investigations/{investigation_id}", headers=headers)
+    assert deleted.status_code == 200
+    assert client.get(f"/api/investigations/{investigation_id}", headers=headers).status_code == 404
