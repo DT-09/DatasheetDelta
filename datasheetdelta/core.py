@@ -314,7 +314,7 @@ def compare(reference_name: str, old: list[Field], revised_name: str, new: list[
 
 def _csv_safe(value: object) -> str:
     text = "" if value is None else str(value)
-    probe = text.lstrip(r" \t\r")
+    probe = text.lstrip(" \t\r")
     if probe.startswith(("=", "+", "@", "\t", "\r")):
         return "'" + text
     if probe.startswith("-") and not NUMBER.fullmatch(probe):
