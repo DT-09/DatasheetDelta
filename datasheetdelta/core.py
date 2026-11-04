@@ -22,6 +22,7 @@ ALIASES = {
 }
 UNITS = {
     "mm": ("length", 1.0), "cm": ("length", 10.0),
+    "um": ("length", 0.001), "µm": ("length", 0.001), "μm": ("length", 0.001),
     "m": ("length", 1000.0), "in": ("length", 25.4),
     "inch": ("length", 25.4), "pa": ("pressure", 1.0),
     "kpa": ("pressure", 1000.0), "mpa": ("pressure", 1_000_000.0),
@@ -32,8 +33,8 @@ UNITS = {
     "kw": ("power", 1000.0), "hz": ("frequency", 1.0),
     "khz": ("frequency", 1000.0), "mhz": ("frequency", 1_000_000.0),
     "kg": ("mass", 1.0), "g": ("mass", 0.001),
-    "°c": ("temperature", 1.0), "c": ("temperature", 1.0),
-    "°f": ("temperature_f", 1.0), "f": ("temperature_f", 1.0),
+    "°c": ("temperature", 1.0), "degc": ("temperature", 1.0),
+    "°f": ("temperature_f", 1.0), "degf": ("temperature_f", 1.0),
     "k": ("temperature_k", 1.0),
     "%": ("percentage", 1.0),
 }
