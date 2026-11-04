@@ -55,7 +55,7 @@ The reviewer name is self-reported. The current shared-token model is suitable o
 ## CLI
 
     datasheetdelta examples/reference.csv examples/revised.csv --out reports/revision
-    datasheetdelta examples/reference.csv examples/revised.csv --tolerance 0.01 --out reports/revision
+    datasheetdelta examples/reference.csv examples/revised.csv --tolerances '{"length": 0.01, "pressure": 100}' --out reports/revision
 
 This writes JSON and CSV reports using the supplied output prefix.
 
@@ -71,7 +71,7 @@ This writes JSON and CSV reports using the supplied output prefix.
 
 Review decisions are confirmed_change, not_material or needs_follow_up. Each event records a reviewer-entered name, timestamp, note and parameter. Events are append-only through the application and hash-chained. This detects accidental or ordinary in-database edits; it is not cryptographic proof against a database administrator who can rewrite the database and recompute the chain. Deleting an investigation deletes its review history too.
 
-The numeric tolerance is absolute and applies only to compatible numeric dimensions after normalization. It is not a percentage tolerance or an engineering acceptance threshold.
+Tolerances are absolute and dimension-specific. Length uses millimetres, pressure pascals, voltage volts, current amperes, power watts, frequency hertz, mass kilograms, temperature degrees Celsius and percentage points. Omitted dimensions use exact comparison. A tolerance is not an engineering acceptance threshold.
 
 ## Extraction boundaries
 
