@@ -48,8 +48,8 @@ def test_export_endpoint_returns_csv_attachment():
 
 
 def test_invalid_report_format_is_rejected():
-    reference = ("reference.csv", b"Parameter,Value\\nPressure,10 bar\\n", "text/csv")
-    revised = ("revised.csv", b"Parameter,Value\\nPressure,12 bar\\n", "text/csv")
+    reference = ("reference.csv", b"Parameter,Value\nPressure,10 bar\n", "text/csv")
+    revised = ("revised.csv", b"Parameter,Value\nPressure,12 bar\n", "text/csv")
     response = client.post(
         "/api/reports/pdf",
         files={"reference": reference, "revised": revised},
@@ -61,8 +61,8 @@ def test_authenticated_review_lifecycle(tmp_path, monkeypatch):
     monkeypatch.setenv("DATASHEETDELTA_ACCESS_TOKEN", "test-secret-token")
     monkeypatch.setenv("DATASHEETDELTA_DB", str(tmp_path / "review.sqlite3"))
     headers = {"Authorization": "Bearer test-secret-token"}
-    reference = ("reference.csv", b"Parameter,Value\\nPressure,10 bar\\n", "text/csv")
-    revised = ("revised.csv", b"Parameter,Value\\nPressure,12 bar\\n", "text/csv")
+    reference = ("reference.csv", b"Parameter,Value\nPressure,10 bar\n", "text/csv")
+    revised = ("revised.csv", b"Parameter,Value\nPressure,12 bar\n", "text/csv")
 
     denied = client.post(
         "/api/investigations",
