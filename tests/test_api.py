@@ -80,6 +80,9 @@ def test_authenticated_review_lifecycle(tmp_path, monkeypatch):
     assert created.status_code == 200
     investigation_id = created.json()["investigation_id"]
     assert created.json()["review_enabled"] is True
+    saved_list = client.get("/api/investigations", headers=headers)
+    assert saved_list.status_code == 200
+    assert saved_list.json()["investigations"][0]["id"] == investigation_id
 
     review = client.post(
         f"/api/investigations/{investigation_id}/reviews",
