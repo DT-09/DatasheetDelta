@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from .core import compare, extract, report_csv
+from .reports import report_pdf
 
 MAX_FILE_BYTES = 15 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".docx", ".pdf", ".txt", ".md"}
@@ -71,11 +72,15 @@ async def export_report(
     revised: UploadFile = File(...),
     tolerance: float = Form(0),
 ) -> Response:
-    if kind not in {"json", "csv"}:
-        raise HTTPException(status_code=404, detail="Available report formats: json, csv.")
+    if kind not in {"json", "csv", "pdf"}:
+        raise HTTPException(status_code=404, detail="Available report formats: json, csv, pdf.")
     result = await build_result(reference, revised, tolerance)
-    body = json.dumps(result, indent=2, ensure_ascii=False) if kind == "json" else report_csv(result)
-    media_type = "application/json; charset=utf-8" if kind == "json" else "text/csv; charset=utf-8"
+    try:
+        body = (json.dumps(result, indent=2, ensure_ascii=False) if kind == "json"
+                else report_csv(result) if kind == "csv" else report_pdf(result))
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    media_type = {"json": "application/json; charset=utf-8", "csv": "text/csv; charset=utf-8", "pdf": "application/pdf"}[kind]
     return Response(body, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="datasheetdelta-report.{kind}"'})
 
 if WEB_DIR.is_dir():
