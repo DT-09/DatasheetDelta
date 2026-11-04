@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Evidence-led engineering specification revision comparison with traceable findings and human review.">
+  <meta name="theme-color" content="#f3f0e7">
+  <title>DatasheetDelta — Engineering Change Intelligence</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header><a class="brand" href="/">DATASHEET<span>DELTA</span></a><nav><a href="#method">Method</a><a href="#scope">Scope</a><a class="nav-cta" href="#workspace">Run an investigation</a></nav></header>
+<main>
+  <section class="hero">
+    <p class="eyebrow">ENGINEERING CHANGE INTELLIGENCE</p>
+    <h1>Know what changed.<br><i>See the evidence.</i></h1>
+    <p class="lede">Compare engineering specifications and supplier datasheets. Turn supported revisions into a traceable change register for qualified review.</p>
+    <a class="primary" href="#workspace">Start an investigation ↗</a>
+    <p class="micro">Files are processed in request memory by the API. The application does not persist uploaded documents or review notes.</p>
+  </section>
+  <section class="statement"><h2>A revised document<br>is not a change log.</h2><p>DatasheetDelta extracts recognizable label/value fields, preserves source locations, compares revisions and flags ambiguity instead of silently choosing between duplicate parameters.</p></section>
+  <section id="workspace" class="workspace">
+    <div class="section-head"><div><p class="eyebrow">01 / INVESTIGATION WORKSPACE</p><h2>Compare two revisions</h2></div><span class="status">Evidence-led · human-reviewed</span></div>
+    <form id="form">
+      <div class="uploads">
+        <label class="upload"><small>A / REFERENCE</small><b>Original specification</b><span>CSV, XLSX, DOCX, text PDF, TXT, MD · 15 MB max</span><input name="reference" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"><em>Choose reference document</em></label>
+        <label class="upload"><small>B / REVISED</small><b>Updated specification</b><span>Select the revision to compare</span><input name="revised" type="file" required accept=".csv,.xlsx,.docx,.pdf,.txt,.md"><em>Choose revised document</em></label>
+      </div>
+      <div class="controls"><label>Numeric tolerance <input name="tolerance" type="number" min="0" step="any" value="0"><span class="micro">Normalized base units, where supported</span></label><button class="primary">Run comparison ↗</button></div>
+    </form>
+    <p id="progress" hidden>Extracting supported fields and comparing evidence…</p>
+    <p id="error" class="error" role="alert" hidden></p>
+    <section id="results" hidden></section>
+  </section>
+  <section id="method" class="method"><p class="eyebrow">02 / METHOD</p><h2>From source document<br>to reviewable evidence.</h2>
+    <div class="steps">
+      <article><small>01</small><h3>Extract</h3><p>Read supported label/value structures. Preserve filename and row, sheet, table, paragraph, page or line location.</p></article>
+      <article><small>02</small><h3>Normalize</h3><p>Convert supported engineering units to common comparison bases while retaining original values.</p></article>
+      <article><small>03</small><h3>Compare</h3><p>Classify added, removed, changed and unchanged fields. Flag duplicate labels and incompatible units.</p></article>
+      <article><small>04</small><h3>Review</h3><p>Record a decision and reviewer note for each finding. Export a review package for the engineering record.</p></article>
+    </div>
+  </section>
+  <section id="scope" class="scope"><h2>Precision starts<br>with honest boundaries.</h2><ul>
+    <li>CSV and XLSX label/value tables</li><li>DOCX tables and label/value paragraphs</li><li>Text-based PDF label/value lines</li><li>TXT and Markdown label/value lines</li><li>Scanned PDFs require OCR; OCR is not included</li><li>Complex layouts, drawings, footnotes and merged structures may be missed</li><li>Repeated labels are preserved and marked ambiguous</li><li>Engineering impact, safety and compliance are not inferred</li>
+  </ul></section>
+</main>
+<footer><a class="brand" href="/">DATASHEET<span>DELTA</span></a><p>Specification changes, with provenance.</p><small>© 2026 DatasheetDelta · Qualified engineering review remains mandatory.</small></footer>
+<script src="/app.js"></script>
+</body></html>
