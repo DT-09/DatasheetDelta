@@ -7,7 +7,7 @@ client = TestClient(app)
 def test_health_endpoint():
     response = client.get("/api/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "1.0.0"
+    assert response.json()["version"] == "0.2.0-dev"
 
 def test_workspace_is_served():
     response = client.get("/")
