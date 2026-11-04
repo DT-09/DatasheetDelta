@@ -18,7 +18,7 @@ WEB_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(
     title="DatasheetDelta",
-    version="1.0.0",
+    version="0.2.0-dev",
     description="Evidence-led comparison of engineering specification revisions. Human review remains mandatory.",
     docs_url="/api/docs",
     redoc_url=None,
@@ -26,7 +26,7 @@ app = FastAPI(
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "product": "DatasheetDelta", "version": "1.0.0"}
+    return {"status": "ok", "product": "DatasheetDelta", "version": "0.2.0-dev"}
 
 async def read_document(upload: UploadFile) -> tuple[str, list, list[str]]:
     filename = Path(upload.filename or "document").name
