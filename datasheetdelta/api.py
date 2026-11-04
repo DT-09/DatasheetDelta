@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import hmac
 import json
 import math
+import os
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from .core import compare, extract, report_csv
+from . import store
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".docx", ".pdf", ".txt", ".md"}
@@ -26,13 +31,45 @@ app = FastAPI(
 )
 
 
+class ReviewInput(BaseModel):
+    parameter: str = Field(min_length=1, max_length=200)
+    decision: Literal["confirmed_change", "not_material", "needs_follow_up"]
+    reviewer: str = Field(min_length=1, max_length=120)
+    note: str = Field(default="", max_length=4000)
+
+
+def check_access(authorization: str | None, *, review: bool = False) -> bool:
+    expected = os.getenv("DATASHEETDELTA_ACCESS_TOKEN", "")
+    if review and not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="Review storage is disabled. Configure DATASHEETDELTA_ACCESS_TOKEN first.",
+        )
+    if expected:
+        scheme, separator, supplied = (authorization or "").partition(" ")
+        if (
+            not separator
+            or scheme.lower() != "bearer"
+            or not hmac.compare_digest(supplied, expected)
+        ):
+            raise HTTPException(status_code=401, detail="A valid bearer access token is required.")
+        return True
+    return False
+
+
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "product": "DatasheetDelta", "mode": "development"}
+    return {
+        "status": "ok",
+        "product": "DatasheetDelta",
+        "mode": "development",
+        "access_token_required": bool(os.getenv("DATASHEETDELTA_ACCESS_TOKEN")),
+    }
 
 
 async def read_doc(upload: UploadFile) -> tuple[str, list, list[str]]:
-    filename = Path(upload.filename or "document").name
+    raw_name = (upload.filename or "document").replace("\\", "/")
+    filename = Path(raw_name).name
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
         raise HTTPException(
@@ -49,7 +86,6 @@ async def read_doc(upload: UploadFile) -> tuple[str, list, list[str]]:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        # Parser/library errors are returned as a safe client error; internals stay in server logs.
         raise HTTPException(
             status_code=422,
             detail=f"{filename} could not be parsed. Check that it is a valid, supported document.",
@@ -78,8 +114,64 @@ async def investigate(
     reference: UploadFile = File(...),
     revised: UploadFile = File(...),
     tolerance: float = Form(0.0),
+    authorization: str | None = Header(default=None),
 ) -> dict:
-    return await build_result(reference, revised, tolerance)
+    access_enabled = check_access(authorization)
+    result = await build_result(reference, revised, tolerance)
+    result["review_enabled"] = access_enabled
+    if access_enabled:
+        metadata = store.save_investigation(result)
+        result.update(metadata)
+    return result
+
+
+@app.get("/api/investigations/{investigation_id}")
+def read_investigation(
+    investigation_id: str,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    check_access(authorization, review=True)
+    record = store.get_investigation(investigation_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Investigation not found.")
+    return record
+
+
+@app.post("/api/investigations/{investigation_id}/reviews")
+def create_review(
+    investigation_id: str,
+    payload: ReviewInput,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    check_access(authorization, review=True)
+    try:
+        event = store.add_review(
+            investigation_id,
+            payload.parameter,
+            payload.decision,
+            payload.reviewer,
+            payload.note,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record = store.get_investigation(investigation_id)
+    return {
+        "event": event,
+        "review_chain_valid": record["review_chain_valid"] if record else False,
+    }
+
+
+@app.delete("/api/investigations/{investigation_id}")
+def remove_investigation(
+    investigation_id: str,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    check_access(authorization, review=True)
+    if not store.delete_investigation(investigation_id):
+        raise HTTPException(status_code=404, detail="Investigation not found.")
+    return {"deleted": True, "investigation_id": investigation_id}
 
 
 @app.post("/api/reports/{kind}")
@@ -88,7 +180,9 @@ async def export_report(
     reference: UploadFile = File(...),
     revised: UploadFile = File(...),
     tolerance: float = Form(0.0),
+    authorization: str | None = Header(default=None),
 ) -> Response:
+    check_access(authorization)
     if kind not in {"json", "csv"}:
         raise HTTPException(status_code=404, detail="Report format must be json or csv.")
     result = await build_result(reference, revised, tolerance)
