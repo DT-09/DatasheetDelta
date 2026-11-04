@@ -1,16 +1,69 @@
-from datasheetdelta.core import extract,compare
+import csv
+import io
+
+import pytest
+
+from datasheetdelta.core import compare, extract
+
 
 def test_csv_extracts_fields_and_locations():
- data=b'Parameter,Value\nPressure,10 bar\nVoltage,24 V\n'; fields,w=extract('x.csv',data)
- assert len(fields)==2 and fields[0].source=='row 2' and not w
+    data = b"Parameter,Value\nPressure,10 bar\nVoltage,24 V\n"
+    fields, warnings = extract("x.csv", data)
+    assert len(fields) == 2
+    assert fields[0].source == "row 2"
+    assert fields[0].dimension == "pressure"
+    assert not warnings
 
-def test_compare_changed_added_removed_unchanged():
- a,_=extract('a.csv',b'Parameter,Value\nPressure,10 bar\nMaterial,Steel\n')
- b,_=extract('b.csv',b'Parameter,Value\nPressure,12 bar\nVoltage,24 V\n')
- result=compare('a.csv',a,'b.csv',b)
- statuses={x['parameter']:x['status'] for x in result['findings']}
- assert statuses=={'material':'removed','pressure':'changed','voltage':'added'}
+
+def test_compare_changed_added_removed_and_unchanged():
+    old, _ = extract("a.csv", b"Parameter,Value\nPressure,10 bar\nMaterial,Steel\n")
+    new, _ = extract("b.csv", b"Parameter,Value\nPressure,12 bar\nVoltage,24 V\n")
+    result = compare("a.csv", old, "b.csv", new)
+    statuses = {item["parameter"]: item["status"] for item in result["findings"]}
+    assert statuses == {"material": "removed", "pressure": "changed", "voltage": "added"}
+
+
+def test_equivalent_units_compare_as_unchanged():
+    old, _ = extract("a.csv", b"Parameter,Value\nLength,10 mm\n")
+    new, _ = extract("b.csv", b"Parameter,Value\nLength,1 cm\n")
+    result = compare("a.csv", old, "b.csv", new)
+    assert result["findings"][0]["status"] == "unchanged"
+
+
+def test_incompatible_units_are_not_compared_as_numbers():
+    old, _ = extract("a.csv", b"Parameter,Value\nRating,10 bar\n")
+    new, _ = extract("b.csv", b"Parameter,Value\nRating,10 V\n")
+    result = compare("a.csv", old, "b.csv", new)
+    assert result["findings"][0]["status"] == "unit_mismatch"
+
+
+def test_duplicate_labels_are_preserved_and_flagged():
+    data = b"Parameter,Value\nPressure,10 bar\nPressure,12 bar\n"
+    fields, warnings = extract("x.csv", data)
+    assert len(fields) == 2
+    assert any("pressure" in warning for warning in warnings)
+    result = compare("x.csv", fields, "y.csv", fields)
+    assert result["findings"][0]["status"] == "ambiguous"
+
 
 def test_text_extraction():
- fields,_=extract('spec.txt',b'Material: Stainless steel\nVoltage: 24 V')
- assert {x.name for x in fields}=={'material','voltage'}
+    fields, _ = extract("spec.txt", b"Material: Stainless steel\nVoltage: 24 V")
+    assert {item.name for item in fields} == {"material", "voltage"}
+
+
+def test_horizontal_key_value_pairs_are_extracted():
+    fields, _ = extract("x.csv", b"Pressure,10 bar,Voltage,24 V\n")
+    assert {item.name for item in fields} == {"pressure", "voltage"}
+
+
+def test_negative_tolerance_rejected():
+    with pytest.raises(ValueError):
+        compare("a", [], "b", [], -0.1)
+
+
+def test_report_csv_quotes_values_and_evidence():
+    fields, _ = extract("x.csv", b'Parameter,Value\nMaterial,"Stainless, grade 316"\n')
+    result = compare("x.csv", fields, "y.csv", fields)
+    exported = csv.DictReader(io.StringIO(__import__("datasheetdelta.core", fromlist=["report_csv"]).report_csv(result)))
+    row = next(exported)
+    assert row["reference"] == "Stainless, grade 316"
