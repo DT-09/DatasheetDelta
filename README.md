@@ -36,7 +36,7 @@ Python 3.10 or newer:
     pip install -e ".[all]"
     uvicorn datasheetdelta.api:app --reload
 
-Open http://127.0.0.1:8000. API health is at /api/health; API documentation is at /api/docs.
+Open http://127.0.0.1:8000. API health is at /api/health; the OpenAPI schema is available at /openapi.json.
 
 Without DATASHEETDELTA_ACCESS_TOKEN, the app runs in development mode: comparisons and exports work, but investigations and review events are not saved. To enable persistence and the review ledger, configure a long random token and a database path:
 
