@@ -50,6 +50,8 @@ UNITS = {
     "hz": ("frequency", 1.0), "khz": ("frequency", 1000.0),
     "mhz": ("frequency", 1_000_000.0), "kg": ("mass", 1.0),
     "g": ("mass", .001), "mg": ("mass", .000001),
+    "pf": ("capacitance", 1e-12), "nf": ("capacitance", 1e-9),
+    "uf": ("capacitance", 1e-6), "µf": ("capacitance", 1e-6), "mf": ("capacitance", 1e-3),
     "°c": ("temperature", 1.0), "c": ("temperature", 1.0),
     "°f": ("temperature_f", 1.0), "f": ("temperature_f", 1.0),
     "%": ("percentage", 1.0), "rpm": ("rotational_speed", 1.0),
