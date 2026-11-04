@@ -24,7 +24,7 @@ def test_pages_origin_can_call_api():
 def test_workspace_is_served_by_api_host():
     response = client.get("/")
     assert response.status_code == 200
-    assert "Engineering revision intelligence" in response.text
+    assert "Find the change." in response.text and "id=\"workspace\"" in response.text
 
 def test_investigation_endpoint_returns_traceable_findings():
     response = client.post(
