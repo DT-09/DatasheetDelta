@@ -110,18 +110,30 @@ async def read_doc(upload: UploadFile) -> tuple[str, list, list[str]]:
     return filename, fields, warnings
 
 
-def validate_tolerance(tolerance: float) -> None:
-    if not math.isfinite(tolerance) or tolerance < 0:
-        raise HTTPException(status_code=422, detail="Tolerance must be a finite, non-negative number.")
+def parse_tolerances(raw: str) -> dict[str, float]:
+    try:
+        tolerances = json.loads(raw or "{}")
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Tolerances must be valid JSON.") from exc
+    if not isinstance(tolerances, dict):
+        raise HTTPException(status_code=422, detail="Tolerances must be a JSON object.")
+    return tolerances
 
 
-async def build_result(reference: UploadFile, revised: UploadFile, tolerance: float) -> dict:
-    validate_tolerance(tolerance)
+async def build_result(
+    reference: UploadFile,
+    revised: UploadFile,
+    tolerances_json: str,
+) -> dict:
+    tolerances = parse_tolerances(tolerances_json)
     reference_name, reference_fields, reference_warnings = await read_doc(reference)
     revised_name, revised_fields, revised_warnings = await read_doc(revised)
-    result = compare(
-        reference_name, reference_fields, revised_name, revised_fields, tolerance
-    )
+    try:
+        result = compare(
+            reference_name, reference_fields, revised_name, revised_fields, tolerances
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     result["warnings"] = reference_warnings + revised_warnings
     return result
 
@@ -130,11 +142,11 @@ async def build_result(reference: UploadFile, revised: UploadFile, tolerance: fl
 async def investigate(
     reference: UploadFile = File(...),
     revised: UploadFile = File(...),
-    tolerance: float = Form(0.0),
+    tolerances: str = Form("{}"),
     authorization: str | None = Header(default=None),
 ) -> dict:
     access_enabled = check_access(authorization)
-    result = await build_result(reference, revised, tolerance)
+    result = await build_result(reference, revised, tolerances)
     result["review_enabled"] = access_enabled
     if access_enabled:
         metadata = store.save_investigation(result)
