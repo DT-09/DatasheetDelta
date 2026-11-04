@@ -43,7 +43,7 @@ function render(report) {
     <div class="result-head">
       <div><p class="eyebrow">02 / INVESTIGATION RESULT</p><h2>Change register</h2>
       <p class="micro">${esc(report.reference_file)} → ${esc(report.revised_file)}</p></div>
-      <div class="actions"><button id="export-review">Export reviewed package</button><button id="export-json">JSON</button><button id="export-csv">CSV</button></div>
+      <div class="actions"><button id="export-review">Reviewed package</button><button id="export-pdf">PDF report</button><button id="export-json">JSON</button><button id="export-csv">CSV</button></div>
     </div>
     <div class="metrics">${[["Compared",findings.length],["Changed",counts.changed||0],["Added",counts.added||0],["Removed",counts.removed||0],["Ambiguous",counts.ambiguous||0],["Unchanged",counts.unchanged||0]].map(([label,value])=>`<div class="metric"><b>${value}</b>${label}</div>`).join("")}</div>
     <div class="review-tools">
@@ -57,6 +57,7 @@ function render(report) {
   results.hidden = false;
   document.querySelector("#status-filter").addEventListener("change", drawFindings);
   document.querySelector("#search-filter").addEventListener("input", drawFindings);
+  document.querySelector("#export-pdf").onclick = exportPdf;
   document.querySelector("#export-json").onclick = () => download("datasheetdelta.json", JSON.stringify(report, null, 2), "application/json");
   document.querySelector("#export-csv").onclick = () => download("datasheetdelta.csv", toCsv(report), "text/csv;charset=utf-8");
   document.querySelector("#export-review").onclick = () => {
@@ -118,4 +119,31 @@ function download(filename, content, type) {
   anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportPdf() {
+  const button = document.querySelector("#export-pdf");
+  button.disabled = true;
+  button.textContent = "Preparing PDF…";
+  try {
+    const response = await fetch("/api/reports/pdf", {method:"POST", body:new FormData(form)});
+    if (!response.ok) {
+      let message = "PDF export failed.";
+      try { const payload = await response.json(); message = payload.detail || message; } catch {}
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "datasheetdelta-report.pdf";
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (exception) {
+    error.textContent = exception.message;
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = "PDF report";
+  }
 }
