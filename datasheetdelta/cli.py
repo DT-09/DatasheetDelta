@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .core import compare, extract, report_csv
+from .reports import report_pdf
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Compare two engineering specification revisions.")
@@ -31,12 +32,18 @@ def main() -> int:
     result["tolerance"] = {"value": args.tolerance, "basis": "normalized base units where dimensions are known"}
     base = Path(args.out)
     base.parent.mkdir(parents=True, exist_ok=True)
-    json_path, csv_path = base.with_suffix(".json"), base.with_suffix(".csv")
+    json_path, csv_path, pdf_path = base.with_suffix(".json"), base.with_suffix(".csv"), base.with_suffix(".pdf")
     json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     csv_path.write_text(report_csv(result), encoding="utf-8-sig", newline="")
+    try:
+        pdf_path.write_bytes(report_pdf(result))
+    except ValueError as exc:
+        print(f"PDF report unavailable: {exc}", file=sys.stderr)
+        return 2
     print(f"Compared {len(result['findings'])} parameters.")
     print(f"JSON: {json_path}")
     print(f"CSV:  {csv_path}")
+    print(f"PDF:  {pdf_path}")
     print("Human engineering review is required before relying on any finding.")
     return 0
 
