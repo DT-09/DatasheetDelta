@@ -1,0 +1,15 @@
+services:
+  datasheetdelta:
+    build: .
+    image: datasheetdelta:local
+    ports:
+      - "8000:8000"
+    environment:
+      DATASHEETDELTA_ACCESS_TOKEN: ${DATASHEETDELTA_ACCESS_TOKEN:?Set DATASHEETDELTA_ACCESS_TOKEN in your environment}
+      DATASHEETDELTA_DB: /data/datasheetdelta.sqlite3
+    volumes:
+      - datasheetdelta-data:/data
+    restart: unless-stopped
+
+volumes:
+  datasheetdelta-data:
