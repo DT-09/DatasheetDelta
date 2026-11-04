@@ -17,7 +17,9 @@ from . import store
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".docx", ".pdf", ".txt", ".md"}
-WEB_DIRECTORY = Path(__file__).resolve().parent.parent / "web"
+PROJECT_DIRECTORY = Path(__file__).resolve().parent.parent
+WEB_DIRECTORY = PROJECT_DIRECTORY / "web"
+EXAMPLES_DIRECTORY = PROJECT_DIRECTORY / "examples"
 
 app = FastAPI(
     title="DatasheetDelta",
@@ -214,4 +216,5 @@ async def export_report(
     )
 
 
+app.mount("/examples", StaticFiles(directory=str(EXAMPLES_DIRECTORY)), name="examples")
 app.mount("/", StaticFiles(directory=str(WEB_DIRECTORY), html=True), name="web")
