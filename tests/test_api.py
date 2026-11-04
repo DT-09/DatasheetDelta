@@ -27,6 +27,7 @@ def test_investigation_endpoint_returns_provenance_and_findings():
     result = response.json()
     assert result["findings"][0]["status"] == "unchanged"
     assert result["findings"][0]["reference_source"] == "row 2"
+    assert result["findings"][0]["reference_excerpt"] == "Pressure: 1 bar"
     assert result["review_required"] is True
 
 def test_unsupported_extension_is_rejected():
