@@ -87,16 +87,24 @@ def _field(label: str, value: str, source: str, excerpt: str) -> Field | None:
     if not match:
         return Field(name, clean_value, None, None, None, source, excerpt)
     number = float(match.group(1).replace(",", ""))
+    if not math.isfinite(number):
+        raise ValueError(f"Numeric value for {label} is outside the supported range.")
     unit = match.group(2)
     unit_key = (unit or "").lower()
     unit_info = UNITS.get(unit_key)
     if unit_info:
         dimension, factor = unit_info
         if dimension == "temperature_f":
-            return Field(name, clean_value, (number - 32.0) * 5.0 / 9.0, unit, "temperature", source, excerpt)
-        if dimension == "temperature_k":
-            return Field(name, clean_value, number - 273.15, unit, "temperature", source, excerpt)
-        return Field(name, clean_value, number * factor, unit, dimension, source, excerpt)
+            normalized = (number - 32.0) * 5.0 / 9.0
+            dimension = "temperature"
+        elif dimension == "temperature_k":
+            normalized = number - 273.15
+            dimension = "temperature"
+        else:
+            normalized = number * factor
+        if not math.isfinite(normalized):
+            raise ValueError(f"Normalized value for {label} is outside the supported range.")
+        return Field(name, clean_value, normalized, unit, dimension, source, excerpt)
     return Field(name, clean_value, number, unit, "unknown" if unit else None, source, excerpt)
 
 
