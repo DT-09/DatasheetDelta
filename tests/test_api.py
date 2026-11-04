@@ -22,7 +22,7 @@ def test_investigation_endpoint_returns_source_linked_findings():
     assert response.status_code == 200
     result = response.json()
     assert result["findings"][0]["status"] == "changed"
-    assert result["findings"][0]["reference_source"] == "row 2"
+    assert result["findings"][0]["reference_source"].startswith("row 2 [")
 
 
 def test_unsupported_extension_is_rejected():
@@ -48,5 +48,10 @@ def test_export_endpoint_returns_csv_attachment():
 
 
 def test_invalid_report_format_is_rejected():
-    response = client.post("/api/reports/pdf")
+    reference = ("reference.csv", b"Parameter,Value\\nPressure,10 bar\\n", "text/csv")
+    revised = ("revised.csv", b"Parameter,Value\\nPressure,12 bar\\n", "text/csv")
+    response = client.post(
+        "/api/reports/pdf",
+        files={"reference": reference, "revised": revised},
+    )
     assert response.status_code == 404
