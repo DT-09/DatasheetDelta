@@ -15,8 +15,8 @@ def main() -> None:
     parser.add_argument("revised", help="Path to the revised document")
     parser.add_argument("--out", default="datasheetdelta-report", help="Output filename prefix")
     parser.add_argument(
-        "--tolerance", type=float, default=0.0,
-        help="Absolute tolerance in normalized base units for compatible numeric values",
+        "--tolerances", default="{}",
+        help='JSON object of absolute tolerances by dimension, e.g. {"length": 0.01, "pressure": 100}',
     )
     args = parser.parse_args()
 
@@ -28,6 +28,7 @@ def main() -> None:
         parser.error(f"Revised document does not exist: {revised_path}")
 
     try:
+        tolerances = json.loads(args.tolerances)
         reference_fields, reference_warnings = extract(
             reference_path.name, reference_path.read_bytes()
         )
@@ -36,7 +37,7 @@ def main() -> None:
         )
         result = compare(
             reference_path.name, reference_fields,
-            revised_path.name, revised_fields, args.tolerance,
+            revised_path.name, revised_fields, tolerances,
         )
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
