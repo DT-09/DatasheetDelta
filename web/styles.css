@@ -8,3 +8,15 @@ button:disabled{opacity:.55;cursor:wait}
 #results{scroll-margin-top:24px}
 .controls .micro{display:block;max-width:360px}
 @media(max-width:420px){h1{font-size:48px}.workspace{margin-inline:-4px}.uploads{gap:10px}.upload{padding:16px}.actions{width:100%}.actions button{flex:1}}
+
+.review-access{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.review-access label{display:block;font-size:12px;color:var(--muted)}
+.review-access input,.review-cell select,.review-cell textarea{display:block;width:100%;margin-top:7px;padding:10px;border:1px solid var(--line);background:var(--white);color:var(--ink);font:inherit;font-size:12px}
+.review-cell{min-width:210px}
+.review-cell button,.danger{margin-top:8px;padding:8px 10px;border:1px solid var(--line);background:var(--white);color:var(--ink);font-size:11px;cursor:pointer}
+.review-cell button:hover,.danger:hover{border-color:var(--brass)}
+.review-history{margin-top:8px;border-top:1px solid var(--line);font-size:11px}
+.review-history p{margin:8px 0}
+.audit-state{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:15px 0;font-size:11px;color:var(--muted)}
+.danger{color:#8b352b;border-color:#c8a69b}
+@media(max-width:720px){.review-access{grid-template-columns:1fr}.audit-state{align-items:flex-start;flex-direction:column}}
