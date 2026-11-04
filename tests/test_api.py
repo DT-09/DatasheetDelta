@@ -114,3 +114,9 @@ def test_synthetic_sample_files_are_served():
     assert revised.status_code == 200
     assert "Parameter,Value" in reference.text
     assert "Maximum pressure" in revised.text
+
+
+def test_saved_investigation_list_requires_server_token(monkeypatch):
+    monkeypatch.delenv("DATASHEETDELTA_ACCESS_TOKEN", raising=False)
+    response = client.get("/api/investigations")
+    assert response.status_code == 503
