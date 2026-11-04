@@ -61,3 +61,15 @@ def test_json_export_endpoint():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
     assert "attachment" in response.headers["content-disposition"]
+
+def test_pdf_export_endpoint_returns_pdf_document():
+    response = client.post(
+        "/api/reports/pdf",
+        files={
+            "reference": ("old.csv", b"Pressure,1 bar\\n", "text/csv"),
+            "revised": ("new.csv", b"Pressure,2 bar\\n", "text/csv"),
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content.startswith(b"%PDF-")
