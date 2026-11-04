@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+import zipfile
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -108,12 +109,38 @@ def _pairs_from_rows(rows: Iterable[tuple], prefix: str, fields: list[Field]) ->
                 source = f"{prefix}row {row_no}" if prefix.endswith("!") else f"{prefix}row {row_no}"
                 _add(fields, label, value, source, f"{label}: {value}")
 
+def _validate_container(ext: str, content: bytes) -> None:
+    if ext == ".pdf":
+        if not content.startswith(b"%PDF-"):
+            raise ValueError("The file extension is PDF but the content is not a PDF document.")
+        return
+    if ext not in {".xlsx", ".docx"}:
+        return
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            entries = archive.infolist()
+            if len(entries) > 5000:
+                raise ValueError("Office document contains too many archive entries.")
+            total_size = sum(entry.file_size for entry in entries)
+            if total_size > 100 * 1024 * 1024:
+                raise ValueError("Office document expands beyond the 100 MB safety limit.")
+            for entry in entries:
+                if entry.file_size > 50 * 1024 * 1024 or entry.file_size / max(entry.compress_size, 1) > 200:
+                    raise ValueError("Office document contains an oversized or highly compressed archive entry.")
+            names = set(archive.namelist())
+            required = {"[Content_Types].xml", "xl/workbook.xml"} if ext == ".xlsx" else {"[Content_Types].xml", "word/document.xml"}
+            if not required.issubset(names):
+                raise ValueError("The Office document package is missing required workbook/document parts.")
+    except zipfile.BadZipFile as exc:
+        raise ValueError("The file is not a valid Office Open XML package.") from exc
+
 def extract(filename: str, content: bytes) -> tuple[list[Field], list[str]]:
     ext = Path(filename).suffix.lower()
     fields: list[Field] = []
     warnings: list[str] = []
     if not content:
         raise ValueError("The document is empty.")
+    _validate_container(ext, content)
     if ext == ".csv":
         try:
             text = content.decode("utf-8-sig")
