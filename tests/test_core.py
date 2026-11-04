@@ -102,3 +102,13 @@ def test_csv_export_neutralizes_spreadsheet_formulas():
     assert _spreadsheet_safe("=HYPERLINK(\"https://example.invalid\")").startswith("'=")
     assert _spreadsheet_safe("@SUM(1,2)").startswith("'@")
     assert _spreadsheet_safe("normal text") == "normal text"
+
+
+def test_scientific_notation_and_micrometre_conversion():
+    scientific, _ = extract("a.csv", b"Parameter,Value\\nPower,1.2e3 W\\n")
+    watts, _ = extract("b.csv", b"Parameter,Value\\nPower,1200 W\\n")
+    assert compare("a.csv", scientific, "b.csv", watts)["findings"][0]["status"] == "unchanged"
+
+    micrometres, _ = extract("c.csv", b"Parameter,Value\\nLength,1000 um\\n")
+    millimetres, _ = extract("d.csv", b"Parameter,Value\\nLength,1 mm\\n")
+    assert compare("c.csv", micrometres, "d.csv", millimetres)["findings"][0]["status"] == "unchanged"
