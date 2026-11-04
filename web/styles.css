@@ -48,3 +48,12 @@ footer p a:hover{color:var(--ink)}
 .tolerance-grid label{font-size:11px;color:var(--muted)}
 .tolerance-grid input{display:block;width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);background:var(--white);color:var(--ink)}
 @media(max-width:720px){.tolerance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.saved-investigations{margin-top:16px}
+.saved-investigations>button,.saved-item button{padding:9px 12px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:11px;cursor:pointer}
+.saved-list{margin-top:10px}
+.saved-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.saved-item b,.saved-item .micro{display:block}
+.saved-item .micro{overflow-wrap:anywhere}
+.saved-investigations button:disabled{opacity:.55;cursor:wait}
+@media(max-width:520px){.saved-item{align-items:flex-start;flex-direction:column}}
