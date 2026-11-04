@@ -1,16 +1,34 @@
 from pathlib import Path
 import json
 import math
+import os
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from .core import compare, extract, report_csv
 
-app = FastAPI(title="DatasheetDelta", version="1.0.0")
+app = FastAPI(title="DatasheetDelta", version="1.1.0")
 MAX_FILE_BYTES = 15 * 1024 * 1024
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+origins = [
+    item.strip()
+    for item in os.getenv(
+        "CORS_ORIGINS",
+        "https://datasheetdelta.pages.dev,http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if item.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept"],
+)
 
 @app.get("/api/health")
 def health():
