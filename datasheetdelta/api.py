@@ -154,6 +154,15 @@ async def investigate(
     return result
 
 
+
+@app.get("/api/investigations")
+def list_saved_investigations(
+    authorization: str | None = Header(default=None),
+) -> dict:
+    check_access(authorization, review=True)
+    return {"investigations": store.list_investigations(50)}
+
+
 @app.get("/api/investigations/{investigation_id}")
 def read_investigation(
     investigation_id: str,
