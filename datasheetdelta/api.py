@@ -1,29 +1,59 @@
 from pathlib import Path
-from fastapi import FastAPI,File,Form,HTTPException,UploadFile
+import json
+import math
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
-from .core import extract,compare,report_csv
-import json
-app=FastAPI(title="DatasheetDelta",version="0.1.0")
-@app.get("/api/health")
-def health(): return {"status":"ok","product":"DatasheetDelta"}
-async def read_doc(file):
- name=file.filename or "document"; ext=Path(name).suffix.lower()
- if ext not in {".csv",".xlsx",".docx",".pdf",".txt",".md"}: raise HTTPException(415,"Unsupported document format")
- data=await file.read(15*1024*1024+1)
- if not data: raise HTTPException(400,"Empty document")
- if len(data)>15*1024*1024: raise HTTPException(413,"Maximum file size is 15 MB")
- try: return name,*extract(name,data)
- except ValueError as e: raise HTTPException(422,str(e)) from e
-@app.post("/api/investigations")
-async def investigate(reference:UploadFile=File(...),revised:UploadFile=File(...),tolerance:float=Form(0)):
- if tolerance<0: raise HTTPException(422,"Tolerance must be non-negative")
- an,af,aw=await read_doc(reference); bn,bf,bw=await read_doc(revised); result=compare(an,af,bn,bf,tolerance); result["warnings"]=aw+bw; return result
-@app.post("/api/reports/{kind}")
-async def export(kind:str,reference:UploadFile=File(...),revised:UploadFile=File(...),tolerance:float=Form(0)):
- if kind not in {"json","csv"}: raise HTTPException(404,"Use json or csv")
- an,af,aw=await read_doc(reference); bn,bf,bw=await read_doc(revised); result=compare(an,af,bn,bf,tolerance); result["warnings"]=aw+bw
- body=json.dumps(result,indent=2) if kind=="json" else report_csv(result)
- return Response(body,media_type="application/json" if kind=="json" else "text/csv",headers={"Content-Disposition":f"attachment; filename=datasheetdelta.{kind}"})
 
-app.mount('/', StaticFiles(directory='web', html=True), name='web')
+from .core import compare, extract, report_csv
+
+app = FastAPI(title="DatasheetDelta", version="1.0.0")
+MAX_FILE_BYTES = 15 * 1024 * 1024
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "product": "DatasheetDelta", "version": app.version}
+
+async def read_document(upload: UploadFile):
+    name = upload.filename or "document"
+    if Path(name).suffix.lower() not in {".csv", ".xlsx", ".docx", ".pdf", ".txt", ".md"}:
+        raise HTTPException(415, "Unsupported document format.")
+    content = await upload.read(MAX_FILE_BYTES + 1)
+    if not content:
+        raise HTTPException(400, f"{name} is empty.")
+    if len(content) > MAX_FILE_BYTES:
+        raise HTTPException(413, f"{name} exceeds the 15 MB per-file limit.")
+    try:
+        fields, warnings = extract(name, content)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return name, fields, warnings
+
+async def build_report(reference: UploadFile, revised: UploadFile, tolerance: float):
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise HTTPException(422, "Tolerance must be a finite, non-negative number.")
+    reference_name, reference_fields, reference_warnings = await read_document(reference)
+    revised_name, revised_fields, revised_warnings = await read_document(revised)
+    result = compare(reference_name, reference_fields, revised_name, revised_fields, tolerance)
+    result["warnings"] = reference_warnings + revised_warnings
+    return result
+
+@app.post("/api/investigations")
+async def investigate(reference: UploadFile = File(...), revised: UploadFile = File(...),
+                      tolerance: float = Form(0)):
+    return await build_report(reference, revised, tolerance)
+
+@app.post("/api/reports/{kind}")
+async def export_report(kind: str, reference: UploadFile = File(...), revised: UploadFile = File(...),
+                        tolerance: float = Form(0)):
+    if kind not in {"json", "csv"}:
+        raise HTTPException(404, "Use /api/reports/json or /api/reports/csv.")
+    result = await build_report(reference, revised, tolerance)
+    body = json.dumps(result, indent=2) if kind == "json" else report_csv(result)
+    media_type = "application/json" if kind == "json" else "text/csv"
+    return Response(body, media_type=media_type,
+                    headers={"Content-Disposition": f"attachment; filename=datasheetdelta.{kind}"})
+
+app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")

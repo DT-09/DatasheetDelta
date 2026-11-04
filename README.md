@@ -1,42 +1,98 @@
 # DatasheetDelta
 
-**Engineering change intelligence.** Compare supplier datasheets and engineering specifications, then review a traceable register of what changed and where each extracted value came from.
+**Engineering change intelligence for technical document revisions.**
 
-## Included in this release
-- Deterministic label/value extraction from CSV, XLSX, DOCX, text-based PDF, TXT and Markdown.
-- Source provenance by row, sheet, table, paragraph, page or line.
-- Conservative normalization for common length, pressure, voltage, current, power, frequency, mass, temperature and percentage units.
-- Added, removed, changed, unchanged and ambiguous-unit classifications.
-- JSON and CSV exports; CLI; optional FastAPI upload service; responsive browser workspace.
-- Dockerfile and synthetic sample documents.
+DatasheetDelta compares two revisions of a supplier datasheet or engineering specification. It extracts supported label/value fields, preserves source locations, normalizes a conservative set of units, and produces a reviewable change register.
+
+It is an evidence-gathering tool. It does **not** decide whether a change is safe, material, compliant, or acceptable.
+
+## Product workflow
+
+1. Upload a reference and revised document.
+2. Extract explicit label/value pairs from supported structures.
+3. Normalize supported numeric units to canonical base units.
+4. Classify fields as added, removed, changed, unchanged, or unit mismatch.
+5. Inspect original values, source locations, warnings, and comparison explanations.
+6. Export the register as JSON or CSV for qualified engineering review.
+
+## Supported inputs
+
+| Format | Supported extraction |
+|---|---|
+| CSV | First two columns as label and value |
+| XLSX | First two columns per row, across worksheets |
+| DOCX | Two-cell table rows and Label: value paragraphs |
+| Text PDF | Extractable Label: value lines |
+| TXT / Markdown | Label: value lines |
+
+Scanned PDFs require OCR. OCR is not included. Complex multi-column layouts, merged tables, footnotes, graphics, images, and implicit relationships may not be extracted. Duplicate normalized labels are reported as warnings; only the first occurrence is included in the comparison register. Review every source occurrence.
+
+## Unit handling
+
+Supported dimensions include length, pressure, voltage, current, power, frequency, mass, temperature, and percentage. Values are converted once to canonical base units for comparison. Original values and units remain in the report.
+
+The optional numeric tolerance is an **absolute tolerance in canonical base units**. It is not a percentage tolerance and should be set deliberately for the parameter being reviewed. One tolerance value applied across unlike dimensions is a convenience, not an engineering policy. For mixed-dimension reviews, keep tolerance at zero and assess values individually.
+
+Unknown or incompatible units are marked unit_mismatch; the engine does not guess conversions. Text values are compared conservatively after trimming and case-folding.
 
 ## Run locally
+
 Python 3.10+.
 
-    python -m venv .venv
-    # Windows: .venv\\Scripts\\activate
-    # macOS/Linux: source .venv/bin/activate
-    pip install -e ".[api,documents,test]"
-    uvicorn datasheetdelta.api:app --reload
+~~~bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -e ".[api,documents,test]"
+uvicorn datasheetdelta.api:app --reload
+~~~
 
-Serve the static interface from the web directory with a same-origin reverse proxy that routes /api to the FastAPI service. The UI expects /api/investigations. API health: /api/health.
+Open http://127.0.0.1:8000. API health: http://127.0.0.1:8000/api/health.
 
 ## CLI
-    datasheetdelta examples/reference.csv examples/revised.csv --out reports/revision
 
-Creates JSON and CSV reports. API routes: POST /api/investigations; POST /api/reports/json; POST /api/reports/csv; GET /api/health.
+~~~bash
+datasheetdelta examples/reference.csv examples/revised.csv --out reports/revision
+~~~
 
-## Extraction contract and limitations
-The first release targets explicit two-column label/value tables or Label: value text. Scanned PDFs require OCR, which is not included. Complex layouts, merged cells, footnotes, multi-column tables and ambiguous labels may be missed. Only a conservative set of units is normalized. Check extracted fields against source documents before relying on a comparison.
+Creates reports/revision.json and reports/revision.csv.
 
-A difference is not automatically a defect or safety issue. DatasheetDelta does not determine engineering impact, certify compliance, or replace qualified engineering approval. Uploads are processed in request memory and are not persisted by this application. Do not upload confidential or export-controlled documents to an unapproved deployment. Sample CSVs are synthetic, not customer data or validation evidence.
+## API
 
-## Tests
-    pip install -e ".[documents,test]"
-    pytest
+- GET /api/health
+- POST /api/investigations — multipart fields reference, revised, optional tolerance
+- POST /api/reports/json — same inputs; downloads JSON
+- POST /api/reports/csv — same inputs; downloads CSV
+
+Maximum upload size: 15 MB per file. Files are read into request memory and are not persisted by this application. Deploy behind HTTPS, apply access controls appropriate to your organization, and obtain approval before uploading confidential, export-controlled, or otherwise restricted material. Do not assume a public demo deployment is an approved document-processing environment.
+
+## Validation
+
+~~~bash
+pip install -e ".[api,documents,test]"
+pytest
+~~~
+
+The test suite covers source provenance, equivalent-unit comparisons, numeric changes, incompatible dimensions, unknown units, duplicate labels, summary counts, tolerance validation, text extraction, API health, multipart investigations, upload rejection, and CSV export.
 
 ## Deployment
-Build the API container with Dockerfile and deploy to a Python container host. Serve web/ as static assets and route /api/* to the API. No live deployment, customer integration or external storage is claimed.
+
+The Dockerfile builds the FastAPI service and static workspace:
+
+~~~bash
+docker build -t datasheetdelta .
+docker run --rm -p 8000:8000 datasheetdelta
+~~~
+
+No customer integrations, persistent storage, OCR, authentication, audit log, or engineering approval workflow are included. These are explicit product boundaries, not implied capabilities.
+
+## Engineering and commercial boundaries
+
+- Extracted values may be incomplete or wrong; verify them against original documents.
+- A detected difference is not automatically a defect, safety issue, supplier breach, or cost impact.
+- No compliance certification, engineering sign-off, or automated materiality assessment is provided.
+- Sample files are synthetic and are not customer evidence or performance validation.
 
 ## License
+
 MIT.
