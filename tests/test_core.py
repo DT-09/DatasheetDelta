@@ -69,8 +69,8 @@ def test_report_csv_quotes_values_and_evidence():
     assert row["reference"] == "Stainless, grade 316"
 
 def test_fahrenheit_and_celsius_are_normalized_with_offset():
-    old, _ = extract("a.csv", b"Parameter,Value\nTemperature,212 F\n")
-    new, _ = extract("b.csv", b"Parameter,Value\nTemperature,100 C\n")
+    old, _ = extract("a.csv", b"Parameter,Value\nTemperature,212 °F\n")
+    new, _ = extract("b.csv", b"Parameter,Value\nTemperature,100 °C\n")
     result = compare("a.csv", old, "b.csv", new)
     assert result["findings"][0]["status"] == "unchanged"
 
