@@ -85,14 +85,14 @@ function drawFindings() {
     return `<article class="finding">
       <div class="finding-heading"><div><span class="pill ${esc(item.status)}">${esc(item.status.replace("_"," "))}</span><h3>${esc(item.parameter.replaceAll("_"," "))}</h3></div>
       <span class="micro">Finding ${index+1} / ${selected.length}</span></div>
-      <div class="comparison"><div><small>REFERENCE</small><b>${esc(item.reference)}</b><p>${esc(item.reference_source)}</p></div><div><small>REVISED</small><b>${esc(item.revised)}</b><p>${esc(item.revised_source)}</p></div></div>
+      <div class="comparison"><div><small>REFERENCE</small><b>${esc(item.reference)}</b><p>${esc(item.reference_source)}</p><p class="source-excerpt">${esc(item.reference_excerpt)}</p></div><div><small>REVISED</small><b>${esc(item.revised)}</b><p>${esc(item.revised_source)}</p><p class="source-excerpt">${esc(item.revised_excerpt)}</p></div></div>
       <p class="explanation">${esc(item.explanation)}</p>
       <div class="review-fields"><label>Engineering review decision<select data-decision="${esc(item.parameter)}">
         <option value="not_reviewed" ${!state.decision||state.decision==="not_reviewed"?"selected":""}>Not reviewed</option>
         <option value="confirmed" ${state.decision==="confirmed"?"selected":""}>Confirmed against source</option>
         <option value="investigate" ${state.decision==="investigate"?"selected":""}>Requires investigation</option>
         <option value="not_applicable" ${state.decision==="not_applicable"?"selected":""}>Not applicable</option>
-      </select></label><label>Reviewer note<textarea data-note="${esc(item.parameter)}" rows="2" placeholder="Record context or follow-up">${esc(state.note||"").replaceAll("—","")}</textarea></label></div>
+      </select></label><label>Reviewer note<textarea data-note="${esc(item.parameter)}" rows="2" placeholder="Record context or follow-up">${esc(state.note||"")}</textarea></label></div>
     </article>`;
   }).join("") : '<p class="micro">No findings match this filter.</p>';
   document.querySelectorAll("[data-decision]").forEach(control => control.addEventListener("change", event => {
@@ -106,7 +106,7 @@ function drawFindings() {
 }
 
 function toCsv(report) {
-  const columns = ["parameter","status","reference","revised","reference_source","revised_source","explanation"];
+  const columns = ["parameter","status","reference","revised","reference_source","revised_source","reference_excerpt","revised_excerpt","explanation"];
   const rows = [columns, ...report.findings.map(item => columns.map(column => item[column] ?? ""))];
   return rows.map(row => row.map(value => '"' + String(value).replace(/"/g,'""') + '"').join(",")).join("\r\n");
 }
