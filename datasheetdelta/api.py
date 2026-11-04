@@ -208,13 +208,13 @@ async def export_report(
     kind: str,
     reference: UploadFile = File(...),
     revised: UploadFile = File(...),
-    tolerance: float = Form(0.0),
+    tolerances: str = Form("{}"),
     authorization: str | None = Header(default=None),
 ) -> Response:
     check_access(authorization)
     if kind not in {"json", "csv"}:
         raise HTTPException(status_code=404, detail="Report format must be json or csv.")
-    result = await build_result(reference, revised, tolerance)
+    result = await build_result(reference, revised, tolerances)
     if kind == "json":
         body = json.dumps(result, indent=2, ensure_ascii=False)
         media_type = "application/json"
