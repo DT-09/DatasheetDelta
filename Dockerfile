@@ -9,7 +9,7 @@ COPY pyproject.toml README.md ./
 COPY datasheetdelta ./datasheetdelta
 COPY web ./web
 
-RUN pip install --no-cache-dir '.[api,documents]' \
+RUN pip install --no-cache-dir '.[api,documents,reports]' \
     && useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app
 
