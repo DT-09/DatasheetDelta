@@ -41,3 +41,10 @@ button:disabled{opacity:.55;cursor:wait}
 footer p a{color:var(--muted);text-decoration:none}
 footer p a:hover{color:var(--ink)}
 @media(max-width:720px){.page-hero{padding:72px 0 48px}.document-section{padding:38px 0}.definitions{grid-template-columns:1fr;gap:4px}.definitions dd{margin-bottom:12px}}
+
+.tolerance-settings{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.tolerance-settings summary{font-size:12px;color:var(--green);cursor:pointer}
+.tolerance-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0}
+.tolerance-grid label{font-size:11px;color:var(--muted)}
+.tolerance-grid input{display:block;width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+@media(max-width:720px){.tolerance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
