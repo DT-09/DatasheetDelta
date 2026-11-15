@@ -1,3 +1,6 @@
+import io
+import zipfile
+
 import pytest
 from datasheetdelta.core import compare, extract
 
@@ -18,6 +21,11 @@ def test_numeric_change_compares_in_base_units():
     result = compare("old.csv", fields("Pressure,10 bar"), "new.csv", fields("Pressure,12 bar"))
     assert result["findings"][0]["status"] == "changed"
     assert "Pa" in result["findings"][0]["explanation"]
+
+def test_fahrenheit_and_celsius_are_normalized_to_same_temperature():
+    result = compare("old.csv", fields("Temperature,100 °C"),
+                     "new.csv", fields("Temperature,212 °F"))
+    assert result["findings"][0]["status"] == "unchanged"
 
 def test_incompatible_dimensions_are_not_compared_as_numbers():
     result = compare("a.csv", fields("Rating,10 bar"), "b.csv", fields("Rating,10 V"))
@@ -45,6 +53,10 @@ def test_negative_or_non_finite_tolerance_rejected():
         compare("a", [], "b", [], -1)
     with pytest.raises(ValueError):
         compare("a", [], "b", [], float("nan"))
+
+def test_malformed_xlsx_archive_is_rejected_cleanly():
+    with pytest.raises(ValueError, match="valid Office document archive"):
+        extract("broken.xlsx", b"not a zip archive")
 
 def test_text_extraction():
     extracted, _ = extract("spec.txt", b"Material: Stainless steel\nVoltage: 24 V")
