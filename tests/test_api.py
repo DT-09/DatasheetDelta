@@ -7,7 +7,9 @@ def test_health_endpoint():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["version"] == "1.1.0"
+    assert response.json()["version"] == "1.2.0"
+    assert response.json()["storage"] == "ephemeral"
+    assert response.headers["cache-control"] == "no-store"
 
 def test_pages_origin_can_call_api():
     response = client.options(
@@ -24,7 +26,7 @@ def test_pages_origin_can_call_api():
 def test_workspace_is_served_by_api_host():
     response = client.get("/")
     assert response.status_code == 200
-    assert "Find the change." in response.text and "id=\"workspace\"" in response.text
+    assert "Find the change." in response.text and 'id="workspace"' in response.text
 
 def test_investigation_endpoint_returns_traceable_findings():
     response = client.post(
@@ -40,6 +42,17 @@ def test_investigation_endpoint_returns_traceable_findings():
     assert result["summary"]["changed"] == 1
     assert result["findings"][0]["reference_source"] == "row 2"
     assert result["review_required"] is True
+    assert result["processing"]["persistence"] == "none"
+
+def test_malformed_office_upload_returns_validation_error():
+    response = client.post(
+        "/api/investigations",
+        files={
+            "reference": ("broken.xlsx", b"not a zip archive", "application/octet-stream"),
+            "revised": ("revised.csv", b"Pressure,10 bar", "text/csv"),
+        },
+    )
+    assert response.status_code == 422
 
 def test_unsupported_upload_is_rejected():
     response = client.post(
