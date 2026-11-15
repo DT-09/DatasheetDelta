@@ -1,7 +1,18 @@
 from __future__ import annotations
-import csv, io, math, re
+
+import csv
+import io
+import math
+import re
+import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+MAX_ARCHIVE_ENTRIES = 2_000
+MAX_ARCHIVE_UNCOMPRESSED = 100 * 1024 * 1024
+MAX_ARCHIVE_RATIO = 200
+MAX_EXTRACTED_FIELDS = 20_000
+MAX_PDF_PAGES = 500
 
 @dataclass
 class Field:
@@ -45,13 +56,33 @@ UNITS = {
     "mhz": ("frequency", 1_000_000.0, "Hz"),
     "kg": ("mass", 1.0, "kg"), "g": ("mass", .001, "kg"),
     "°c": ("temperature", 1.0, "°C"), "c": ("temperature", 1.0, "°C"),
+    "°f": ("temperature", 5 / 9, "°C"), "f": ("temperature", 5 / 9, "°C"),
     "%": ("percentage", 1.0, "%"),
 }
-NUMBER = re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*([^\d\s].*?)?\s*$")
+NUMBER = re.compile(r"^\\s*([-+]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)?(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\s*([^\\d\\s].*?)?\\s*$")
 
 def _normalise_name(label: str) -> str:
-    label = re.sub(r"\s+", " ", label.strip().lower()).rstrip(":")
+    label = re.sub(r"\\s+", " ", label.strip().lower()).rstrip(":")
     return ALIASES.get(label, re.sub(r"[^a-z0-9]+", "_", label).strip("_"))
+
+def _validate_archive(content: bytes, filename: str) -> None:
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            entries = archive.infolist()
+            if len(entries) > MAX_ARCHIVE_ENTRIES:
+                raise ValueError(f"{filename} contains too many archive entries.")
+            total = sum(item.file_size for item in entries)
+            if total > MAX_ARCHIVE_UNCOMPRESSED:
+                raise ValueError(f"{filename} expands beyond the 100 MB processing limit.")
+            for item in entries:
+                if item.flag_bits & 0x1:
+                    raise ValueError(f"{filename} contains encrypted archive content.")
+                if item.file_size > 1_000_000 and item.compress_size == 0:
+                    raise ValueError(f"{filename} contains an invalid compressed entry.")
+                if item.compress_size and item.file_size / item.compress_size > MAX_ARCHIVE_RATIO:
+                    raise ValueError(f"{filename} has an unsafe compression ratio.")
+    except zipfile.BadZipFile as exc:
+        raise ValueError(f"{filename} is not a valid Office document archive.") from exc
 
 def _field(label, value, source, excerpt):
     name = _normalise_name(str(label or ""))
@@ -73,24 +104,34 @@ def _field(label, value, source, excerpt):
     info = UNITS.get(unit.casefold())
     if info:
         dimension, factor, base_unit = info
-        return Field(name, value, number * factor, unit, source, excerpt, dimension, base_unit)
+        canonical = number * factor
+        if dimension == "temperature" and unit.casefold() in {"°f", "f"}:
+            canonical = (number - 32) * 5 / 9
+        return Field(name, value, canonical, unit, source, excerpt, dimension, base_unit)
     return Field(name, value, number, unit or None, source, excerpt)
 
 def extract(filename: str, content: bytes):
     ext = Path(filename).suffix.lower()
     fields, warnings = [], []
+
     def add(label, value, location, excerpt):
         field = _field(label, value, location, excerpt)
         if field:
             fields.append(field)
+            if len(fields) > MAX_EXTRACTED_FIELDS:
+                raise ValueError(f"{filename} exceeds the {MAX_EXTRACTED_FIELDS:,}-field extraction limit.")
+
     if ext == ".csv":
         try:
             text = content.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise ValueError("CSV must be UTF-8 encoded.") from exc
-        for index, row in enumerate(csv.reader(io.StringIO(text)), 1):
-            if len(row) >= 2:
-                add(row[0], row[1], f"row {index}", f"{row[0]}: {row[1]}")
+        try:
+            for index, row in enumerate(csv.reader(io.StringIO(text)), 1):
+                if len(row) >= 2:
+                    add(row[0], row[1], f"row {index}", f"{row[0]}: {row[1]}")
+        except csv.Error as exc:
+            raise ValueError(f"Could not parse {filename}: invalid CSV structure.") from exc
     elif ext in {".txt", ".md"}:
         try:
             lines = content.decode("utf-8-sig").splitlines()
@@ -101,21 +142,26 @@ def extract(filename: str, content: bytes):
                 label, value = line.split(":", 1)
                 add(label, value, f"line {index}", line)
     elif ext == ".xlsx":
+        _validate_archive(content, filename)
         try:
             import openpyxl
-        except ImportError as exc:
-            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
-        workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
-        for sheet in workbook.worksheets:
-            for index, row in enumerate(sheet.iter_rows(values_only=True), 1):
-                if len(row) >= 2 and row[0] is not None and row[1] is not None:
-                    add(row[0], row[1], f"{sheet.title}!row {index}", f"{row[0]}: {row[1]}")
+            workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+            try:
+                for sheet in workbook.worksheets:
+                    for index, row in enumerate(sheet.iter_rows(values_only=True), 1):
+                        if len(row) >= 2 and row[0] is not None and row[1] is not None:
+                            add(row[0], row[1], f"{sheet.title}!row {index}", f"{row[0]}: {row[1]}")
+            finally:
+                workbook.close()
+        except (KeyError, OSError, zipfile.BadZipFile) as exc:
+            raise ValueError(f"Could not parse {filename}: invalid XLSX workbook.") from exc
     elif ext == ".docx":
+        _validate_archive(content, filename)
         try:
             from docx import Document
-        except ImportError as exc:
-            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
-        document = Document(io.BytesIO(content))
+            document = Document(io.BytesIO(content))
+        except Exception as exc:
+            raise ValueError(f"Could not parse {filename}: invalid DOCX document.") from exc
         for table_index, table in enumerate(document.tables, 1):
             for row_index, row in enumerate(table.rows, 1):
                 if len(row.cells) >= 2:
@@ -128,18 +174,23 @@ def extract(filename: str, content: bytes):
     elif ext == ".pdf":
         try:
             from pypdf import PdfReader
-        except ImportError as exc:
-            raise ValueError("Install document support: pip install 'datasheetdelta[documents]'") from exc
-        reader = PdfReader(io.BytesIO(content))
-        for page_index, page in enumerate(reader.pages, 1):
-            for line_index, line in enumerate((page.extract_text() or "").splitlines(), 1):
-                if ":" in line:
-                    label, value = line.split(":", 1)
-                    add(label, value, f"page {page_index}, line {line_index}", line)
+            reader = PdfReader(io.BytesIO(content), strict=True)
+            if len(reader.pages) > MAX_PDF_PAGES:
+                raise ValueError(f"{filename} exceeds the {MAX_PDF_PAGES}-page processing limit.")
+            for page_index, page in enumerate(reader.pages, 1):
+                for line_index, line in enumerate((page.extract_text() or "").splitlines(), 1):
+                    if ":" in line:
+                        label, value = line.split(":", 1)
+                        add(label, value, f"page {page_index}, line {line_index}", line)
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError(f"Could not parse {filename}: invalid or encrypted PDF.") from exc
         if not fields:
             warnings.append("No text fields found. Scanned PDFs need OCR; OCR is not included.")
     else:
         raise ValueError("Supported formats: CSV, XLSX, DOCX, text PDF, TXT and MD.")
+
     grouped = {}
     for field in fields:
         grouped.setdefault(field.name, []).append(field)
@@ -147,7 +198,10 @@ def extract(filename: str, content: bytes):
     for name, candidates in grouped.items():
         if len(candidates) > 1:
             locations = ", ".join(item.source for item in candidates[:5])
-            warnings.append(f"Duplicate field '{name}' at {locations}. Only the first occurrence is compared; review all source occurrences.")
+            suffix = f" (+{len(candidates) - 5} more)" if len(candidates) > 5 else ""
+            warnings.append(
+                f"Duplicate field '{name}' at {locations}{suffix}. Only the first occurrence is compared; review all source occurrences."
+            )
         unique.append(candidates[0])
     if not unique:
         warnings.append(f"No label/value fields extracted from {filename}. Use a two-column table or Label: value lines.")
