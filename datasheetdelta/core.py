@@ -59,10 +59,10 @@ UNITS = {
     "°f": ("temperature", 5 / 9, "°C"), "f": ("temperature", 5 / 9, "°C"),
     "%": ("percentage", 1.0, "%"),
 }
-NUMBER = re.compile(r"^\\s*([-+]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)?(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\s*([^\\d\\s].*?)?\\s*$")
+NUMBER = re.compile(r"^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*([^\d\s].*?)?\s*$")
 
 def _normalise_name(label: str) -> str:
-    label = re.sub(r"\\s+", " ", label.strip().lower()).rstrip(":")
+    label = re.sub(r"\s+", " ", label.strip().lower()).rstrip(":")
     return ALIASES.get(label, re.sub(r"[^a-z0-9]+", "_", label).strip("_"))
 
 def _validate_archive(content: bytes, filename: str) -> None:
@@ -153,7 +153,7 @@ def extract(filename: str, content: bytes):
                             add(row[0], row[1], f"{sheet.title}!row {index}", f"{row[0]}: {row[1]}")
             finally:
                 workbook.close()
-        except (KeyError, OSError, zipfile.BadZipFile) as exc:
+        except Exception as exc:
             raise ValueError(f"Could not parse {filename}: invalid XLSX workbook.") from exc
     elif ext == ".docx":
         _validate_archive(content, filename)
